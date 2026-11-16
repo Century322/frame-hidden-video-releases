@@ -1,7 +1,20 @@
 {
-  "version": "1.2.1",
-  "published": "2026-11-15T01:29:00Z",
-  "notes": "旧版本占位清单，等待 1.3.0 发布。",
-  "page": "https://github.com/Century322/frame-hidden-video-releases/releases/latest",
-  "assets": {}
+  "version": "1.3.0",
+  "published": "2026-11-16T15:42:38Z",
+  "notes": "帧隐视频 v1.3.0\n\n新增\n- 支持在「设置 → 更新」中检查并安装新版本\n- 生成文件自动按时间命名，重名不会覆盖旧作品\n- 输入框支持右键剪切、复制、粘贴、删除、全选\n\n优化\n- 预览速度大幅提升\n- 深色主题启动更顺滑\n- 窗口最小化、恢复更稳定\n- 下拉菜单在窗口底部会自动向上展开\n- 字号上限会随文字长度自动适配\n\n修复\n- 修复「打开输出目录」点击无响应\n- 修复生成完成后偶尔重复打开文件夹\n- 修复预览中调整参数后按钮状态异常\n- 修复部分视频播放或拖动进度的问题\n",
+  "page": "https://github.com/Century322/frame-hidden-video-releases/releases/tag/v1.3.0",
+  "assets": {
+    "portable": {
+      "url": "https://github.com/Century322/frame-hidden-video-releases/releases/download/v1.3.0/FrameHidden_Portable_v1.3.0.exe",
+      "name": "FrameHidden_Portable_v1.3.0.exe",
+      "size": 127224013,
+      "sha256": "e25bc8bfe3a19345781385c955f08af9321b11370bed5a91d13474f0fcc64e17"
+    },
+    "installer": {
+      "url": "https://github.com/Century322/frame-hidden-video-releases/releases/download/v1.3.0/FrameHidden_Setup_v1.3.0.exe",
+      "name": "FrameHidden_Setup_v1.3.0.exe",
+      "size": 128249374,
+      "sha256": "27568632161f1d58bbd9b546837c39d74db1295e4c7b30ce8e3b266cd83ccbc4"
+    }
+  }
 }
