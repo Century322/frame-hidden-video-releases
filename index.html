@@ -12,7 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./css/app.css?v=12">
+<link rel="stylesheet" href="./css/app.css?v=13">
 </head>
 <body>
 <div id="app">
@@ -31,23 +31,28 @@
       <button id="btnPause" type="button">暂停</button>
     </div>
 
-    <div id="controls">
+    <div id="textModule" class="field">
+      <div class="field-title">隐藏文字</div>
+      <textarea id="inpText" rows="2" spellcheck="false" aria-label="隐藏文字">测试隐藏文字</textarea>
+      <p class="hint">连续播放时能读出文字，暂停或截屏只能看到碎片</p>
+    </div>
 
-      <div id="pcTabs" role="tablist" aria-label="功能切换">
-        <button type="button" role="tab" data-tab="text" aria-controls="tab-text" aria-selected="true" class="on">文字</button>
-        <button type="button" role="tab" data-tab="visual" aria-controls="tab-visual" aria-selected="false">画面</button>
-        <button type="button" role="tab" data-tab="effect" aria-controls="tab-effect" aria-selected="false">效果</button>
-        <button type="button" role="tab" data-tab="export" aria-controls="tab-export" aria-selected="false">导出</button>
+    <div id="controls">
+      <div id="drawerHead">
+        <div class="drawer-handle" aria-hidden="true"></div>
+        <div class="drawer-row">
+          <b id="drawerTitle">字体</b>
+          <button type="button" id="drawerClose">完成</button>
+        </div>
       </div>
 
-      <section id="tab-text" class="tab-page active" data-tab="text" role="tabpanel" aria-label="文字">
-        <h2 class="sec-title">文字</h2>
+      <div id="pcTabs" role="tablist" aria-label="功能切换">
+        <button type="button" role="tab" data-tab="font" aria-controls="tab-font" aria-selected="true" class="on">字体</button>
+        <button type="button" role="tab" data-tab="visual" aria-controls="tab-visual" aria-selected="false">画面</button>
+        <button type="button" role="tab" data-tab="effect" aria-controls="tab-effect" aria-selected="false">效果</button>
+      </div>
 
-        <div class="field">
-          <div class="field-title">隐藏文字</div>
-          <textarea id="inpText" rows="2" spellcheck="false" aria-label="隐藏文字">测试隐藏文字</textarea>
-        </div>
-
+      <section id="tab-font" class="tab-page active" data-tab="font" role="tabpanel" aria-label="字体">
         <div class="field">
           <div class="field-title">字体大小<span class="val num" id="valFont"></span></div>
           <input type="range" id="rgFont" min="40" max="300" step="1" aria-label="字体大小">
@@ -76,12 +81,10 @@
           <input type="range" id="rgPerspY" min="-100" max="100" step="1" aria-label="文字上下倾斜">
         </div>
 
-        <p class="hint">在预览里拖动文字调整位置，双击或点「重置位置」复位</p>
+        <p class="hint">位置在预览里拖动调整，双击或点「重置位置」复位</p>
       </section>
 
       <section id="tab-visual" class="tab-page" data-tab="visual" role="tabpanel" aria-label="画面">
-        <h2 class="sec-title">画面</h2>
-
         <div class="field">
           <div class="field-title">画面比例</div>
           <div class="chips wrap" id="aspectChips">
@@ -132,8 +135,6 @@
       </section>
 
       <section id="tab-effect" class="tab-page" data-tab="effect" role="tabpanel" aria-label="效果">
-        <h2 class="sec-title">效果</h2>
-
         <div class="field">
           <div class="field-title">压印<span class="helper">字符立体效果</span></div>
           <div class="chips" id="embossChips">
@@ -169,7 +170,7 @@
 
         <div class="field">
           <div class="field-title">翻页过场<span class="helper">完整字一闪而过</span></div>
-          <select id="selFlip" class="select" aria-label="翻页过场">
+          <select id="selFlip" class="native-select" aria-label="翻页过场">
             <option value="none">无</option>
             <option value="book_turn">右翻</option>
             <option value="book_turn_l">左翻</option>
@@ -181,7 +182,7 @@
           <div class="row2" style="margin-top:10px">
             <div>
               <div class="sub-label">翻页时长</div>
-              <select id="selFlipDur" class="select" aria-label="翻页时长">
+              <select id="selFlipDur" class="native-select" aria-label="翻页时长">
                 <option value="0.3">0.3 秒</option>
                 <option value="0.5">0.5 秒</option>
                 <option value="0.8">0.8 秒</option>
@@ -190,7 +191,7 @@
             </div>
             <div>
               <div class="sub-label">翻页间隔</div>
-              <select id="selFlipInt" class="select" aria-label="翻页间隔">
+              <select id="selFlipInt" class="native-select" aria-label="翻页间隔">
                 <option value="0">只一次</option>
                 <option value="3">3 秒</option>
                 <option value="5">5 秒</option>
@@ -216,59 +217,54 @@
           <p class="hint adv-note">仅视频导出生效；无法保证绝对无法被识别，请合规使用</p>
         </div>
       </section>
+    </div>
 
-      <section id="tab-export" class="tab-page" data-tab="export" role="tabpanel" aria-label="导出">
-        <h2 class="sec-title">导出</h2>
-
-        <div class="field">
-          <div class="field-title">保存格式</div>
-          <div class="chips" id="fmtChips">
-            <button type="button" data-v="mp4" class="on">MP4 视频</button>
-            <button type="button" data-v="gif">GIF 动图</button>
-          </div>
-        </div>
-
-        <div class="field" id="gifSizeField" hidden>
-          <div class="field-title">GIF 尺寸</div>
-          <select id="selGifEdge" class="select" aria-label="GIF 尺寸">
-            <option value="480">高清 480</option>
-            <option value="500">微信表情 500</option>
-            <option value="360">抖音表情 360</option>
+    <div id="exportBar">
+      <div class="export-row">
+        <div class="export-field">
+          <span class="export-label">格式</span>
+          <select id="selFmt" class="native-select" aria-label="保存格式">
+            <option value="mp4">MP4 视频</option>
+            <option value="gif">GIF 动图</option>
           </select>
         </div>
-
-        <div class="field" id="durationField">
-          <div class="field-title">视频时长</div>
-          <select id="selDuration" class="select" aria-label="视频时长">
+        <div class="export-field" id="durationField">
+          <span class="export-label">时长</span>
+          <select id="selDuration" class="native-select" aria-label="视频时长">
             <option value="5">5 秒</option>
             <option value="8">8 秒</option>
             <option value="10">10 秒</option>
             <option value="15">15 秒</option>
           </select>
         </div>
-
-        <div class="progress" id="progress" hidden>
-          <div class="bar"><div class="fill" id="progressBar"></div></div>
-          <span class="label num" id="progressLabel">0%</span>
+        <div class="export-field" id="gifSizeField" hidden>
+          <span class="export-label">尺寸</span>
+          <select id="selGifEdge" class="native-select" aria-label="GIF 尺寸">
+            <option value="480">高清 480</option>
+            <option value="500">微信表情 500</option>
+            <option value="360">抖音表情 360</option>
+          </select>
         </div>
-
-        <button type="button" id="btnExport" class="primary">生成并保存</button>
-        <p class="hint">连续播放时能读出文字，暂停或截屏只能看到碎片</p>
-      </section>
-
+      </div>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div class="fill" id="progressBar"></div></div>
+        <span class="label num" id="progressLabel">0%</span>
+      </div>
+      <button type="button" id="btnExport" class="primary">生成并保存</button>
     </div>
   </main>
 
   <nav id="tabbar" role="tablist" aria-label="功能切换">
-    <button type="button" role="tab" data-tab="text" aria-controls="tab-text" aria-selected="true" class="on">文字</button>
+    <button type="button" role="tab" data-tab="font" aria-controls="tab-font" aria-selected="true" class="on">字体</button>
     <button type="button" role="tab" data-tab="visual" aria-controls="tab-visual" aria-selected="false">画面</button>
     <button type="button" role="tab" data-tab="effect" aria-controls="tab-effect" aria-selected="false">效果</button>
-    <button type="button" role="tab" data-tab="export" aria-controls="tab-export" aria-selected="false">导出</button>
   </nav>
 
+  <div id="drawerBackdrop" hidden></div>
+  <div id="ddMenu" class="dd-menu" hidden></div>
   <div id="toast"></div>
 </div>
 
-<script type="module" src="./js/app.js?v=12"></script>
+<script type="module" src="./js/app.js?v=13"></script>
 </body>
 </html>

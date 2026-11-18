@@ -444,16 +444,30 @@ function bindRange(id, valId, getV, setV, fmt, needsText) {
   };
 }
 
-function bindSelect(id, getV, setV) {
+function bindSelect(id, getV, setV, after) {
   const el = $(id);
   el.value = getV();
-  el.onchange = () => { setV(el.value); resetPreview(); };
+  el.onchange = () => {
+    setV(el.value);
+    if (after) after();
+    resetPreview();
+  };
 }
 
-function switchTab(name) {
+let activeTab = 'font';
+let drawerOpen = false;
+const TAB_LABELS = { font: '字体', visual: '画面', effect: '效果' };
+
+function isMobile() {
+  return window.matchMedia('(max-width: 759px)').matches;
+}
+
+function setActiveTab(name) {
+  closeDropdown();
   if (document.activeElement && document.activeElement.blur) {
     document.activeElement.blur();
   }
+  activeTab = name;
   document.querySelectorAll('.tab-page').forEach((sec) => {
     sec.classList.toggle('active', sec.dataset.tab === name);
   });
@@ -463,8 +477,154 @@ function switchTab(name) {
     btn.setAttribute('aria-selected', on ? 'true' : 'false');
     btn.tabIndex = on ? 0 : -1;
   });
+  const title = $('drawerTitle');
+  if (title) title.textContent = TAB_LABELS[name] || '';
+  if (!isMobile()) {
+    const controls = $('controls');
+    if (controls) controls.scrollTop = 0;
+  }
+}
+
+function openDrawer() {
+  if (!isMobile()) return;
+  drawerOpen = true;
+  closeDropdown();
   const controls = $('controls');
-  if (controls) controls.scrollTop = 0;
+  const backdrop = $('drawerBackdrop');
+  if (controls) {
+    controls.classList.add('open');
+    controls.scrollTop = 0;
+  }
+  if (backdrop) backdrop.hidden = false;
+}
+
+function closeDrawer() {
+  drawerOpen = false;
+  closeDropdown();
+  const controls = $('controls');
+  const backdrop = $('drawerBackdrop');
+  if (controls) controls.classList.remove('open');
+  if (backdrop) backdrop.hidden = true;
+}
+
+function handleTabClick(name) {
+  if (isMobile()) {
+    if (drawerOpen && activeTab === name) {
+      closeDrawer();
+      return;
+    }
+    setActiveTab(name);
+    openDrawer();
+  } else {
+    setActiveTab(name);
+  }
+}
+
+/* ------------------------------------------------ 自绘下拉 --- */
+const ddEntries = [];
+let ddOpen = null;
+
+function enhanceSelect(sel) {
+  if (!sel || sel.dataset.ddEnhanced) return;
+  sel.dataset.ddEnhanced = '1';
+  const dd = document.createElement('div');
+  dd.className = 'dd';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dd-btn';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  btn.setAttribute('aria-expanded', 'false');
+  const label = sel.getAttribute('aria-label');
+  if (label) btn.setAttribute('aria-label', label);
+  const text = document.createElement('span');
+  text.className = 'dd-text';
+  const arrow = document.createElement('span');
+  arrow.className = 'dd-arrow';
+  arrow.textContent = '▾';
+  btn.append(text, arrow);
+  dd.append(btn);
+  sel.parentNode.insertBefore(dd, sel);
+  sel.hidden = true;
+  const sync = () => {
+    const opt = sel.options[sel.selectedIndex];
+    text.textContent = opt ? opt.textContent : '';
+    btn.disabled = sel.disabled;
+  };
+  sync();
+  sel.addEventListener('change', sync);
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleDropdown(sel, btn);
+  });
+  ddEntries.push({ sel, btn, text, sync, dd });
+}
+
+function enhanceAllSelects() {
+  document.querySelectorAll('select.native-select').forEach(enhanceSelect);
+  syncCustomSelects();
+}
+
+function syncCustomSelects() {
+  ddEntries.forEach((e) => e.sync());
+}
+
+function closeDropdown() {
+  if (!ddOpen) return;
+  ddOpen.btn.setAttribute('aria-expanded', 'false');
+  const menu = $('ddMenu');
+  if (menu) {
+    menu.hidden = true;
+    menu.innerHTML = '';
+  }
+  ddOpen = null;
+}
+
+function toggleDropdown(sel, btn) {
+  if (ddOpen && ddOpen.sel === sel) {
+    closeDropdown();
+    return;
+  }
+  if (sel.disabled) return;
+  closeDropdown();
+  const menu = $('ddMenu');
+  if (!menu) return;
+  ddOpen = { sel, btn };
+  btn.setAttribute('aria-expanded', 'true');
+  menu.innerHTML = '';
+  menu.setAttribute('role', 'listbox');
+  [...sel.options].forEach((opt) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dd-item';
+    item.textContent = opt.textContent;
+    item.setAttribute('role', 'option');
+    const on = opt.value === sel.value;
+    if (on) {
+      item.classList.add('on');
+      item.setAttribute('aria-selected', 'true');
+    }
+    item.onclick = (e) => {
+      e.stopPropagation();
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      closeDropdown();
+    };
+    menu.appendChild(item);
+  });
+  menu.hidden = false;
+  const r = btn.getBoundingClientRect();
+  const mw = Math.max(Math.round(r.width), 140);
+  menu.style.width = mw + 'px';
+  const mh = menu.offsetHeight;
+  let left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - mw - 8));
+  let top = r.bottom + 6;
+  const forceUp = !!btn.closest('#exportBar');
+  if ((forceUp || top + mh > window.innerHeight - 8) && r.top - mh - 6 > 8) {
+    top = r.top - mh - 6;
+  }
+  top = Math.max(8, Math.min(top, window.innerHeight - mh - 8));
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
 }
 
 function syncFmtFields() {
@@ -513,6 +673,7 @@ function applyAntiUi() {
     }
     state.flipBeforeAnti = 'none';
   }
+  syncCustomSelects();
 }
 
 function bindUI() {
@@ -557,8 +718,7 @@ function bindUI() {
   };
   $('inpCustomW').addEventListener('change', applyCustomAspect);
   $('inpCustomH').addEventListener('change', applyCustomAspect);
-  bindChips('fmtChips', () => state.fmt, (v) => { state.fmt = v; },
-    () => { syncFmtFields(); resetPreview(); });
+  bindSelect('selFmt', () => state.fmt, (v) => { state.fmt = v; }, syncFmtFields);
 
   bindRange('rgFont', 'valFont', () => state.fontSize, (v) => { state.fontSize = v; },
     (v) => v + ' px', true);
@@ -590,7 +750,6 @@ function bindUI() {
 
   bindChips('embossChips', () => state.emboss, (v) => { state.emboss = v; },
     () => { rebuildScene(); resetPreview(); });
-
   $('inpColor').value = state.color;
   $('inpColor').addEventListener('input', () => {
     state.color = $('inpColor').value;
@@ -739,10 +898,30 @@ function bindUI() {
   $('btnExport').onclick = doExport;
 
   document.querySelectorAll('#tabbar button, #pcTabs button').forEach((btn) => {
-    btn.onclick = () => switchTab(btn.dataset.tab);
+    btn.onclick = () => handleTabClick(btn.dataset.tab);
   });
+  $('drawerClose').onclick = closeDrawer;
+  $('drawerBackdrop').onclick = closeDrawer;
 
-  window.addEventListener('resize', layoutCanvas);
+  document.addEventListener('pointerdown', (e) => {
+    if (!ddOpen) return;
+    const menu = $('ddMenu');
+    if (menu && (menu.contains(e.target) || ddOpen.btn.contains(e.target))) return;
+    closeDropdown();
+  }, true);
+  window.addEventListener('scroll', () => {
+    if (ddOpen) closeDropdown();
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeDropdown();
+      closeDrawer();
+    }
+  });
+  window.addEventListener('resize', () => {
+    layoutCanvas();
+    closeDrawer();
+  });
 }
 
 /* ------------------------------------------------ 防AI扰动 --- */
@@ -1082,10 +1261,17 @@ async function doExport() {
   const controls = $('controls');
   const tabbar = $('tabbar');
   const pcTabs = $('pcTabs');
+  const exportBar = $('exportBar');
+  const stage = $('stage');
+  const textModule = $('textModule');
+  closeDrawer();
   controls.setAttribute('inert', '');
   controls.setAttribute('aria-busy', 'true');
   tabbar.setAttribute('inert', '');
   pcTabs.setAttribute('inert', '');
+  exportBar.setAttribute('inert', '');
+  stage.setAttribute('inert', '');
+  textModule.setAttribute('inert', '');
   $('btnPause').disabled = true;
   $('btnExport').disabled = true;
   $('btnExport').textContent = '生成中…';
@@ -1115,6 +1301,9 @@ async function doExport() {
     controls.removeAttribute('aria-busy');
     tabbar.removeAttribute('inert');
     pcTabs.removeAttribute('inert');
+    exportBar.removeAttribute('inert');
+    stage.removeAttribute('inert');
+    textModule.removeAttribute('inert');
     $('btnPause').disabled = false;
     $('btnExport').disabled = false;
     $('btnExport').textContent = '生成并保存';
@@ -1131,7 +1320,9 @@ function init() {
   applyAntiUi();
   setupCanvas();
   bindUI();
-  switchTab('text');
+  enhanceAllSelects();
+  setActiveTab('font');
+  closeDrawer();
   resetPreview();
   tick();
 
