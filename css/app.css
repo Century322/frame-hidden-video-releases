@@ -38,7 +38,7 @@ body {
 }
 .num { font-variant-numeric: tabular-nums; font-family: Consolas, monospace; }
 
-#app { height: 100%; display: flex; flex-direction: column; }
+#app { height: 100%; height: 100dvh; display: flex; flex-direction: column; }
 
 #topbar {
   flex: none;
@@ -97,11 +97,15 @@ main {
   cursor: pointer;
 }
 #btnPause:active { color: var(--ink); }
+#btnPause:disabled { opacity: .45; cursor: default; }
 
 /* 参数 */
 #controls { display: flex; flex-direction: column; gap: 16px; padding-bottom: 8px; }
 /* 桌面端控制栏有固定高度且可滚动，子项不能被 flex 压缩（否则折叠面板会被压扁） */
 #controls > * { flex: none; }
+#controls[inert] { pointer-events: none; opacity: .85; }
+input[type='range']:disabled { opacity: .4; }
+.select:disabled { opacity: .5; }
 .field-title {
   display: flex;
   align-items: baseline;
@@ -132,6 +136,8 @@ textarea:focus { border-color: var(--muted); }
 
 .chips { display: flex; gap: 8px; }
 .chips.wrap { flex-wrap: wrap; }
+#aspectChips { display: grid; grid-template-columns: repeat(3, 1fr); }
+#aspectChips button { min-width: 0; width: 100%; }
 .chips button {
   flex: 1;
   min-width: 64px;

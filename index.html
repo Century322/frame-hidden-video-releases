@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0A0A0B">
+<meta name="description" content="帧隐视频：连续播放能读出隐藏文字，暂停或截屏只能看到碎片。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="帧隐视频">
 <title>帧隐视频</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./css/app.css?v=9">
+<link rel="stylesheet" href="./css/app.css?v=10">
 </head>
 <body>
 <div id="app">
@@ -28,15 +32,18 @@
 
       <div class="field">
         <div class="field-title">隐藏文字</div>
-        <textarea id="inpText" rows="2" spellcheck="false">测试隐藏文字</textarea>
+        <textarea id="inpText" aria-label="隐藏文字" rows="2" spellcheck="false">测试隐藏文字</textarea>
       </div>
 
       <div class="field">
         <div class="field-title">画面比例</div>
-        <div class="chips" id="aspectChips">
+        <div class="chips wrap" id="aspectChips">
           <button type="button" data-v="9:16" class="on">9:16</button>
           <button type="button" data-v="16:9">16:9</button>
           <button type="button" data-v="1:1">1:1</button>
+          <button type="button" data-v="4:5">4:5</button>
+          <button type="button" data-v="3:4">3:4</button>
+          <button type="button" data-v="21:9">21:9</button>
         </div>
       </div>
 
@@ -47,38 +54,38 @@
 
       <div class="field">
         <div class="field-title">字体大小<span class="val num" id="valFont"></span></div>
-        <input type="range" id="rgFont" min="40" max="300" step="1">
+        <input type="range" id="rgFont" aria-label="字体大小" min="40" max="300" step="1">
       </div>
 
       <div class="field">
         <div class="field-title">条纹宽度<span class="val num" id="valStripe"></span></div>
-        <input type="range" id="rgStripe" min="4" max="60" step="1">
+        <input type="range" id="rgStripe" aria-label="条纹宽度" min="4" max="60" step="1">
       </div>
 
       <div class="field">
         <div class="field-title">遮挡强度<span class="val num" id="valOcclusion"></span></div>
-        <input type="range" id="rgOcclusion" min="0" max="100" step="1">
+        <input type="range" id="rgOcclusion" aria-label="遮挡强度" min="0" max="100" step="1">
       </div>
 
       <div class="field">
         <div class="field-title">速度<span class="val num" id="valSpeed"></span></div>
-        <input type="range" id="rgSpeed" min="0.3" max="3" step="0.1">
+        <input type="range" id="rgSpeed" aria-label="速度" min="0.3" max="3" step="0.1">
       </div>
 
       <div class="field">
         <div class="field-title">字体宽度<span class="val num" id="valFontWidth"></span></div>
-        <input type="range" id="rgFontWidth" min="0.5" max="2" step="0.05">
+        <input type="range" id="rgFontWidth" aria-label="字体宽度" min="0.5" max="2" step="0.05">
       </div>
 
       <div class="field">
         <div class="field-title">不透明度<span class="val num" id="valOpacity"></span></div>
-        <input type="range" id="rgOpacity" min="0" max="100" step="1">
+        <input type="range" id="rgOpacity" aria-label="不透明度" min="0" max="100" step="1">
       </div>
 
       <div class="field row2">
         <div>
           <div class="field-title">文字颜色</div>
-          <input type="color" id="inpColor" value="#FFFFFF">
+          <input type="color" id="inpColor" aria-label="文字颜色" value="#FFFFFF">
         </div>
         <div>
           <div class="field-title">背景图片</div>
@@ -98,6 +105,15 @@
         </div>
       </div>
 
+      <div class="field" id="gifSizeField" hidden>
+        <div class="field-title">GIF 尺寸</div>
+        <select id="selGifEdge" aria-label="GIF 尺寸" class="select">
+          <option value="480">高清 480</option>
+          <option value="500">微信表情 500</option>
+          <option value="360">抖音表情 360</option>
+        </select>
+      </div>
+
       <details class="adv" id="advPanel">
         <summary>
           <span>高级效果</span>
@@ -113,7 +129,7 @@
               <button type="button" data-v="pressed">凸起</button>
             </div>
             <div class="sub-label">压印清晰度<span class="val num" id="valClarity"></span></div>
-            <input type="range" id="rgClarity" min="0" max="100" step="1">
+            <input type="range" id="rgClarity" aria-label="压印清晰度" min="0" max="100" step="1">
           </div>
 
           <div class="switch-field">
@@ -125,9 +141,9 @@
           </div>
           <div id="seqRows" hidden>
             <div class="sub-label">依次速度<span class="val num" id="valSeqSpeed"></span></div>
-            <input type="range" id="rgSeqSpeed" min="0.2" max="15" step="0.1">
+            <input type="range" id="rgSeqSpeed" aria-label="依次速度" min="0.2" max="15" step="0.1">
             <div class="sub-label">每次显示<span class="val num" id="valSeqChars"></span></div>
-            <input type="range" id="rgSeqChars" min="1" max="10" step="1">
+            <input type="range" id="rgSeqChars" aria-label="每次显示" min="1" max="10" step="1">
           </div>
 
           <div class="switch-field">
@@ -140,7 +156,7 @@
 
           <div class="field">
             <div class="field-title">翻页过场<span class="helper">完整字一闪而过</span></div>
-            <select id="selFlip" class="select">
+            <select id="selFlip" aria-label="翻页过场" class="select">
               <option value="none">无</option>
               <option value="book_turn">右翻</option>
               <option value="book_turn_l">左翻</option>
@@ -152,7 +168,7 @@
             <div class="row2" style="margin-top:10px">
               <div>
                 <div class="sub-label">翻页时长</div>
-                <select id="selFlipDur" class="select">
+                <select id="selFlipDur" aria-label="翻页时长" class="select">
                   <option value="0.3">0.3 秒</option>
                   <option value="0.5">0.5 秒</option>
                   <option value="0.8">0.8 秒</option>
@@ -161,7 +177,7 @@
               </div>
               <div>
                 <div class="sub-label">翻页间隔</div>
-                <select id="selFlipInt" class="select">
+                <select id="selFlipInt" aria-label="翻页间隔" class="select">
                   <option value="0">只一次</option>
                   <option value="3">3 秒</option>
                   <option value="5">5 秒</option>
@@ -169,6 +185,7 @@
                 </select>
               </div>
             </div>
+            <p class="hint adv-note" id="flipAntiNote" hidden>防AI增强开启时不可用：翻页会露出完整字</p>
           </div>
 
           <div class="switch-field">
@@ -180,9 +197,9 @@
           </div>
           <div id="antiRows" hidden>
             <div class="sub-label">字符微动幅度<span class="val num" id="valMotion"></span></div>
-            <input type="range" id="rgMotion" min="0" max="20" step="1">
+            <input type="range" id="rgMotion" aria-label="字符微动幅度" min="0" max="20" step="1">
             <div class="sub-label">对抗扰动强度<span class="val num" id="valAdv"></span></div>
-            <input type="range" id="rgAdv" min="0" max="100" step="1">
+            <input type="range" id="rgAdv" aria-label="对抗扰动强度" min="0" max="100" step="1">
             <p class="hint adv-note">仅视频导出生效；无法保证绝对无法被识别，请合规使用</p>
           </div>
 
@@ -203,6 +220,6 @@
 </div>
 
 <script src="./vendor/mp4-muxer.js"></script>
-<script type="module" src="./js/app.js?v=9"></script>
+<script type="module" src="./js/app.js?v=10"></script>
 </body>
 </html>

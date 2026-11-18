@@ -343,8 +343,12 @@ function makeCharLayer(mctx, ch, fs, color, widthScale, pad, embossMode, clarity
     ctx.fillText(ch, w / 2, h / 2);
   }
   let out = cv;
-  if (embossMode !== 'none') out = embossCanvas(cv, embossMode, clarity, color);
-  else if (opacity < 0.999) applyOpacity(cv, opacity);
+  if (embossMode !== 'none') {
+    out = embossCanvas(cv, embossMode, clarity, color);
+    if (opacity < 0.999) applyOpacity(out, opacity);
+  } else if (opacity < 0.999) {
+    applyOpacity(cv, opacity);
+  }
   return { canvas: out, adv };
 }
 

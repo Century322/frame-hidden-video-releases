@@ -28,9 +28,11 @@ const state = {
   flip: 'none',
   flipDur: 0.5,
   flipInt: 0,             // 0 = 只一次
+  flipBeforeAnti: 'none',
   anti: false,
   motion: 6,
   adv: 50,
+  gifEdge: 480,
 };
 
 let canvas;
@@ -266,10 +268,13 @@ function bindSelect(id, getV, setV) {
   el.onchange = () => { setV(el.value); resetPreview(); };
 }
 
+function syncFmtFields() {
+  $('gifSizeField').hidden = state.fmt !== 'gif';
+}
+
 function bindUI() {
   // 百叶窗模式按钮（按引擎定义生成）
-  const modeBox = $('modeChips');
-  for (const [key, label] of E.MODES) {
+  const modeBox = $('modeChips');  for (const [key, label] of E.MODES) {
     const b = document.createElement('button');
     b.type = 'button';
     b.dataset.v = key;
@@ -291,7 +296,8 @@ function bindUI() {
     state.aspect = [a, b];
     setupCanvas();
   });
-  bindChips('fmtChips', () => state.fmt, (v) => { state.fmt = v; }, resetPreview);
+  bindChips('fmtChips', () => state.fmt, (v) => { state.fmt = v; },
+    () => { syncFmtFields(); resetPreview(); });
 
   bindRange('rgFont', 'valFont', () => state.fontSize, (v) => { state.fontSize = v; },
     (v) => v + ' px', true);
@@ -347,17 +353,43 @@ function bindUI() {
   $('swAnti').onchange = () => {
     state.anti = $('swAnti').checked;
     $('antiRows').hidden = !state.anti;
-    if (state.anti && state.occlusion < 70) {
-      state.occlusion = 70;
-      $('rgOcclusion').value = 70;
-      fillRange($('rgOcclusion'), $('valOcclusion'), (v) => v + '%');
+    if (state.anti) {
+      // 翻页会露出完整字，与“任意单帧不出现完整字”冲突，直接禁用
+      if (state.flip !== 'none') {
+        state.flipBeforeAnti = state.flip;
+        state.flip = 'none';
+      }
+      $('selFlip').value = 'none';
+      $('selFlip').disabled = true;
+      $('selFlipDur').disabled = true;
+      $('selFlipInt').disabled = true;
+      $('flipAntiNote').hidden = false;
+      $('rgOcclusion').disabled = true;
+      if (state.occlusion < 70) {
+        state.occlusion = 70;
+        $('rgOcclusion').value = 70;
+        fillRange($('rgOcclusion'), $('valOcclusion'), (v) => v + '%');
+      }
+    } else {
+      $('selFlip').disabled = false;
+      $('selFlipDur').disabled = false;
+      $('selFlipInt').disabled = false;
+      $('flipAntiNote').hidden = true;
+      $('rgOcclusion').disabled = false;
+      if (state.flipBeforeAnti && state.flipBeforeAnti !== 'none') {
+        state.flip = state.flipBeforeAnti;
+        $('selFlip').value = state.flip;
+      }
+      state.flipBeforeAnti = 'none';
     }
     resetPreview();
   };
 
-  bindSelect('selFlip', () => state.flip, (v) => { state.flip = v; });
+  bindSelect('selFlip', () => state.flip, (v) => { if (!state.anti) state.flip = v; });
   bindSelect('selFlipDur', () => String(state.flipDur), (v) => { state.flipDur = parseFloat(v); });
   bindSelect('selFlipInt', () => String(state.flipInt), (v) => { state.flipInt = parseFloat(v); });
+  bindSelect('selGifEdge', () => String(state.gifEdge), (v) => { state.gifEdge = parseInt(v, 10) || 480; });
+  syncFmtFields();
 
   $('btnPause').onclick = () => {
     state.playing = !state.playing;
@@ -446,11 +478,19 @@ async function exportMp4() {
   const w = fullW, h = fullH;
   const fps = E.FPS;
   const total = E.FPS * E.DURATION;
-  const codec = 'avc1.420028';                 // Baseline Level 4.0
-  const support = await VideoEncoder.isConfigSupported({
+  const mb = Math.ceil(w / 16) * Math.ceil(h / 16);
+  // 1080p 级别用 Level 4.0；21:9 等更宽的画布用 Level 5.0
+  let codec = mb <= 8192 ? 'avc1.420028' : 'avc1.420032';
+  let support = await VideoEncoder.isConfigSupported({
     codec, width: w, height: h, bitrate: 9_000_000, framerate: fps,
   });
-  if (!support.supported) throw new Error('此浏览器不支持视频导出');
+  if (!support.supported) {
+    codec = mb <= 8192 ? 'avc1.420032' : 'avc1.420033';
+    support = await VideoEncoder.isConfigSupported({
+      codec, width: w, height: h, bitrate: 9_000_000, framerate: fps,
+    });
+  }
+  if (!support.supported) throw new Error('此浏览器不支持该画面的视频导出，请改用 GIF');
 
   const muxer = new Mp4Muxer.Muxer({
     target: new Mp4Muxer.ArrayBufferTarget(),
@@ -510,7 +550,7 @@ async function exportMp4() {
 async function exportGif() {
   const { GIFEncoder, quantize, applyPalette } = await import('../vendor/gifenc.js');
   const [fw, fh] = fullSize();
-  const maxEdge = 480;
+  const maxEdge = state.gifEdge || 480;
   const sc = Math.min(1, maxEdge / Math.max(fw, fh));
   const gw = even(fw * sc), gh = even(fh * sc);
   const gsc = gw / fw;
@@ -571,6 +611,10 @@ async function doExport() {
   state.playing = false;
   window.__lastExportError = null;
   clearTimeout(progressHideTimer);
+  const controls = $('controls');
+  controls.setAttribute('inert', '');
+  controls.setAttribute('aria-busy', 'true');
+  $('btnPause').disabled = true;
   $('btnExport').disabled = true;
   $('btnExport').textContent = '生成中…';
   phase = 0;
@@ -586,9 +630,14 @@ async function doExport() {
     console.error(ex);
     window.__lastExportError = (ex && ex.stack) ? String(ex.stack) : String(ex);
     setProgress(null);
-    toast('生成失败，请重试');
+    const msg = (ex && /^此浏览器不支持/.test(ex.message || ''))
+      ? ex.message : '生成失败，请重试';
+    toast(msg);
   } finally {
     exporting = false;
+    controls.removeAttribute('inert');
+    controls.removeAttribute('aria-busy');
+    $('btnPause').disabled = false;
     $('btnExport').disabled = false;
     $('btnExport').textContent = '生成并保存';
     state.playing = wasPlaying;         // 尊重导出前的暂停状态
