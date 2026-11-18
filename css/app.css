@@ -314,16 +314,6 @@ input[type='color'] {
   color: var(--muted);
 }
 
-/* 手机上：导出按钮吸底，滚动时始终可点 */
-@media (max-width: 759px) {
-  #controls { padding-bottom: 72px; }
-  .primary {
-    position: sticky;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    box-shadow: 0 -16px 20px 14px var(--bg), 0 -6px 18px rgba(0, 0, 0, .35);
-  }
-}
-
 /* toast */
 #toast {
   position: fixed;
@@ -347,41 +337,8 @@ input[type='color'] {
   #toast { bottom: 32px; }
 }
 
-/* 高级效果面板 */
+/* 通用显示 */
 [hidden] { display: none !important; }
-
-.adv {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface);
-  overflow: hidden;
-}
-.adv > summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 14px;
-  font-weight: 600;
-  font-size: 13px;
-}
-.adv > summary::-webkit-details-marker { display: none; }
-.adv > summary::after {
-  content: '▾';
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 12px;
-  transition: transform .15s;
-}
-.adv[open] > summary::after { transform: rotate(180deg); }
-.adv-sub { font-weight: 400; font-size: 11.5px; color: var(--muted); }
-.adv-body {
-  padding: 0 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .switch-field { display: flex; align-items: center; gap: 12px; }
 .switch-text { display: flex; flex-direction: column; gap: 2px; }
@@ -454,6 +411,107 @@ input[type='color'] {
   margin-left: auto;
 }
 .adv-note { margin-top: 8px; }
+
+/* 手机端底部 Tab（桌面端不显示） */
+.tab-page { display: flex; flex-direction: column; gap: 16px; }
+.sec-title { display: none; }
+#tabbar { display: none; }
+#pcTabs { display: none; }
+
+@media (max-width: 759px) {
+  main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  #stage {
+    flex: none;
+    height: 42vh;
+    max-height: 42vh;
+    min-height: 220px;
+  }
+  #canvasHolder canvas { max-height: calc(42vh - 32px); }
+  #controls {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 0 calc(16px + env(safe-area-inset-bottom));
+    gap: 16px;
+  }
+  .tab-page:not(.active) { display: none; }
+  .sec-title { display: none; }
+  #tabbar {
+    display: flex;
+    flex: none;
+    gap: 4px;
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  #tabbar button {
+    flex: 1;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 0 9px;
+    cursor: pointer;
+    position: relative;
+  }
+  #tabbar button.on {
+    color: var(--ink);
+    background: var(--surface2);
+  }
+  #tabbar button.on::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--primary);
+    transform: translateX(-50%);
+  }
+}
+
+#tabbar[inert] { opacity: .5; pointer-events: none; }
+#pcTabs[inert] { opacity: .5; pointer-events: none; }
+
+@media (min-width: 760px) {
+  #pcTabs {
+    display: flex;
+    gap: 4px;
+    flex: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg);
+    padding-bottom: 8px;
+  }
+  #pcTabs button {
+    flex: 1;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 0;
+    cursor: pointer;
+  }
+  #pcTabs button.on {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: transparent;
+  }
+  #controls .tab-page:not(.active) { display: none; }
+}
 
 /* 桌面宽屏时左右布局 */
 @media (min-width: 760px) {

@@ -450,6 +450,23 @@ function bindSelect(id, getV, setV) {
   el.onchange = () => { setV(el.value); resetPreview(); };
 }
 
+function switchTab(name) {
+  if (document.activeElement && document.activeElement.blur) {
+    document.activeElement.blur();
+  }
+  document.querySelectorAll('.tab-page').forEach((sec) => {
+    sec.classList.toggle('active', sec.dataset.tab === name);
+  });
+  document.querySelectorAll('#tabbar button, #pcTabs button').forEach((btn) => {
+    const on = btn.dataset.tab === name;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    btn.tabIndex = on ? 0 : -1;
+  });
+  const controls = $('controls');
+  if (controls) controls.scrollTop = 0;
+}
+
 function syncFmtFields() {
   $('gifSizeField').hidden = state.fmt !== 'gif';
   $('durationField').hidden = state.fmt !== 'mp4';
@@ -720,6 +737,10 @@ function bindUI() {
   };
 
   $('btnExport').onclick = doExport;
+
+  document.querySelectorAll('#tabbar button, #pcTabs button').forEach((btn) => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
 
   window.addEventListener('resize', layoutCanvas);
 }
@@ -1059,8 +1080,12 @@ async function doExport() {
   window.__lastExportError = null;
   clearTimeout(progressHideTimer);
   const controls = $('controls');
+  const tabbar = $('tabbar');
+  const pcTabs = $('pcTabs');
   controls.setAttribute('inert', '');
   controls.setAttribute('aria-busy', 'true');
+  tabbar.setAttribute('inert', '');
+  pcTabs.setAttribute('inert', '');
   $('btnPause').disabled = true;
   $('btnExport').disabled = true;
   $('btnExport').textContent = '生成中…';
@@ -1088,6 +1113,8 @@ async function doExport() {
     exporting = false;
     controls.removeAttribute('inert');
     controls.removeAttribute('aria-busy');
+    tabbar.removeAttribute('inert');
+    pcTabs.removeAttribute('inert');
     $('btnPause').disabled = false;
     $('btnExport').disabled = false;
     $('btnExport').textContent = '生成并保存';
@@ -1104,6 +1131,7 @@ function init() {
   applyAntiUi();
   setupCanvas();
   bindUI();
+  switchTab('text');
   resetPreview();
   tick();
 

@@ -12,7 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./css/app.css?v=11">
+<link rel="stylesheet" href="./css/app.css?v=12">
 </head>
 <body>
 <div id="app">
@@ -33,71 +33,75 @@
 
     <div id="controls">
 
-      <div class="field">
-        <div class="field-title">隐藏文字</div>
-        <textarea id="inpText" aria-label="隐藏文字" rows="2" spellcheck="false">测试隐藏文字</textarea>
+      <div id="pcTabs" role="tablist" aria-label="功能切换">
+        <button type="button" role="tab" data-tab="text" aria-controls="tab-text" aria-selected="true" class="on">文字</button>
+        <button type="button" role="tab" data-tab="visual" aria-controls="tab-visual" aria-selected="false">画面</button>
+        <button type="button" role="tab" data-tab="effect" aria-controls="tab-effect" aria-selected="false">效果</button>
+        <button type="button" role="tab" data-tab="export" aria-controls="tab-export" aria-selected="false">导出</button>
       </div>
 
-      <div class="field">
-        <div class="field-title">画面比例</div>
-        <div class="chips wrap" id="aspectChips">
-          <button type="button" data-v="9:16" class="on">9:16</button>
-          <button type="button" data-v="16:9">16:9</button>
-          <button type="button" data-v="1:1">1:1</button>
-          <button type="button" data-v="4:5">4:5</button>
-          <button type="button" data-v="3:4">3:4</button>
-          <button type="button" data-v="21:9">21:9</button>
-          <button type="button" data-v="custom">自定义</button>
+      <section id="tab-text" class="tab-page active" data-tab="text" role="tabpanel" aria-label="文字">
+        <h2 class="sec-title">文字</h2>
+
+        <div class="field">
+          <div class="field-title">隐藏文字</div>
+          <textarea id="inpText" rows="2" spellcheck="false" aria-label="隐藏文字">测试隐藏文字</textarea>
         </div>
-        <div id="customAspectRow" class="custom-aspect" hidden>
-          <input type="number" id="inpCustomW" min="1" max="200" step="1" aria-label="自定义比例宽">
-          <span>:</span>
-          <input type="number" id="inpCustomH" min="1" max="200" step="1" aria-label="自定义比例高">
-          <span class="hint">宽 : 高</span>
+
+        <div class="field">
+          <div class="field-title">字体大小<span class="val num" id="valFont"></span></div>
+          <input type="range" id="rgFont" min="40" max="300" step="1" aria-label="字体大小">
         </div>
-      </div>
 
-      <div class="field">
-        <div class="field-title">百叶窗样式</div>
-        <div class="chips wrap" id="modeChips"></div>
-      </div>
+        <div class="field">
+          <div class="field-title">字体宽度<span class="val num" id="valFontWidth"></span></div>
+          <input type="range" id="rgFontWidth" min="0.5" max="2" step="0.05" aria-label="字体宽度">
+        </div>
 
-      <div class="field">
-        <div class="field-title">字体大小<span class="val num" id="valFont"></span></div>
-        <input type="range" id="rgFont" aria-label="字体大小" min="40" max="300" step="1">
-      </div>
+        <div class="field">
+          <div class="field-title">不透明度<span class="val num" id="valOpacity"></span></div>
+          <input type="range" id="rgOpacity" min="0" max="100" step="1" aria-label="不透明度">
+        </div>
 
-      <div class="field">
-        <div class="field-title">条纹宽度<span class="val num" id="valStripe"></span></div>
-        <input type="range" id="rgStripe" aria-label="条纹宽度" min="4" max="60" step="1">
-      </div>
-
-      <div class="field">
-        <div class="field-title">遮挡强度<span class="val num" id="valOcclusion"></span></div>
-        <input type="range" id="rgOcclusion" aria-label="遮挡强度" min="0" max="100" step="1">
-      </div>
-
-      <div class="field">
-        <div class="field-title">速度<span class="val num" id="valSpeed"></span></div>
-        <input type="range" id="rgSpeed" aria-label="速度" min="0.3" max="3" step="0.1">
-      </div>
-
-      <div class="field">
-        <div class="field-title">字体宽度<span class="val num" id="valFontWidth"></span></div>
-        <input type="range" id="rgFontWidth" aria-label="字体宽度" min="0.5" max="2" step="0.05">
-      </div>
-
-      <div class="field">
-        <div class="field-title">不透明度<span class="val num" id="valOpacity"></span></div>
-        <input type="range" id="rgOpacity" aria-label="不透明度" min="0" max="100" step="1">
-      </div>
-
-      <div class="field row2">
-        <div>
+        <div class="field">
           <div class="field-title">文字颜色</div>
-          <input type="color" id="inpColor" aria-label="文字颜色" value="#FFFFFF">
+          <input type="color" id="inpColor" value="#FFFFFF" aria-label="文字颜色">
         </div>
-        <div>
+
+        <div class="field">
+          <div class="field-title">文字透视<span class="helper">倾斜文字平面</span></div>
+          <div class="sub-label">左右倾斜<span class="val num" id="valPerspX"></span></div>
+          <input type="range" id="rgPerspX" min="-100" max="100" step="1" aria-label="文字左右倾斜">
+          <div class="sub-label">上下倾斜<span class="val num" id="valPerspY"></span></div>
+          <input type="range" id="rgPerspY" min="-100" max="100" step="1" aria-label="文字上下倾斜">
+        </div>
+
+        <p class="hint">在预览里拖动文字调整位置，双击或点「重置位置」复位</p>
+      </section>
+
+      <section id="tab-visual" class="tab-page" data-tab="visual" role="tabpanel" aria-label="画面">
+        <h2 class="sec-title">画面</h2>
+
+        <div class="field">
+          <div class="field-title">画面比例</div>
+          <div class="chips wrap" id="aspectChips">
+            <button type="button" data-v="9:16" class="on">9:16</button>
+            <button type="button" data-v="16:9">16:9</button>
+            <button type="button" data-v="1:1">1:1</button>
+            <button type="button" data-v="4:5">4:5</button>
+            <button type="button" data-v="3:4">3:4</button>
+            <button type="button" data-v="21:9">21:9</button>
+            <button type="button" data-v="custom">自定义</button>
+          </div>
+          <div id="customAspectRow" class="custom-aspect" hidden>
+            <input type="number" id="inpCustomW" min="1" max="200" step="1" aria-label="自定义比例宽">
+            <span>:</span>
+            <input type="number" id="inpCustomH" min="1" max="200" step="1" aria-label="自定义比例高">
+            <span class="hint">宽 : 高</span>
+          </div>
+        </div>
+
+        <div class="field">
           <div class="field-title">背景<span class="helper">图片或视频</span></div>
           <div class="btn-row">
             <button type="button" class="btn" id="btnBg">选择背景</button>
@@ -105,148 +109,166 @@
           </div>
           <input type="file" id="fileBg" accept="image/*,video/*" hidden>
         </div>
-      </div>
 
-      <div class="field">
-        <div class="field-title">保存格式</div>
-        <div class="chips" id="fmtChips">
-          <button type="button" data-v="mp4" class="on">MP4 视频</button>
-          <button type="button" data-v="gif">GIF 动图</button>
+        <div class="field">
+          <div class="field-title">百叶窗样式</div>
+          <div class="chips wrap" id="modeChips"></div>
         </div>
-      </div>
 
-      <div class="field" id="gifSizeField" hidden>
-        <div class="field-title">GIF 尺寸</div>
-        <select id="selGifEdge" class="select" aria-label="GIF 尺寸">
-          <option value="480">高清 480</option>
-          <option value="500">微信表情 500</option>
-          <option value="360">抖音表情 360</option>
-        </select>
-      </div>
-
-      <div class="field" id="durationField">
-        <div class="field-title">视频时长</div>
-        <select id="selDuration" class="select" aria-label="视频时长">
-          <option value="5">5 秒</option>
-          <option value="8">8 秒</option>
-          <option value="10">10 秒</option>
-          <option value="15">15 秒</option>
-        </select>
-      </div>
-
-      <details class="adv" id="advPanel">
-        <summary>
-          <span>高级效果</span>
-          <span class="adv-sub">压印 · 逐字 · 翻页 · 防AI</span>
-        </summary>
-        <div class="adv-body">
-
-          <div class="field">
-            <div class="field-title">压印<span class="helper">字符立体效果</span></div>
-            <div class="chips" id="embossChips">
-              <button type="button" data-v="none" class="on">无</button>
-              <button type="button" data-v="engrave">雕刻</button>
-              <button type="button" data-v="pressed">凸起</button>
-            </div>
-            <div class="sub-label">压印清晰度<span class="val num" id="valClarity"></span></div>
-            <input type="range" id="rgClarity" aria-label="压印清晰度" min="0" max="100" step="1">
-          </div>
-
-          <div class="switch-field">
-            <div class="switch-text">
-              <b>逐个字符</b>
-              <span>按输入顺序循环显示</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="swSeq" aria-label="逐个字符"><span class="track"></span></label>
-          </div>
-          <div id="seqRows" hidden>
-            <div class="sub-label">依次速度<span class="val num" id="valSeqSpeed"></span></div>
-            <input type="range" id="rgSeqSpeed" aria-label="依次速度" min="0.2" max="15" step="0.1">
-            <div class="sub-label">每次显示<span class="val num" id="valSeqChars"></span></div>
-            <input type="range" id="rgSeqChars" aria-label="每次显示" min="1" max="10" step="1">
-          </div>
-
-          <div class="switch-field">
-            <div class="switch-text">
-              <b>数字变形</b>
-              <span>扭曲 0-9，专克数字</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="swDigit" aria-label="数字变形"><span class="track"></span></label>
-          </div>
-
-          <div class="field">
-            <div class="field-title">文字透视<span class="helper">倾斜文字平面</span></div>
-            <div class="sub-label">左右倾斜<span class="val num" id="valPerspX"></span></div>
-            <input type="range" id="rgPerspX" min="-100" max="100" step="1" aria-label="文字左右倾斜">
-            <div class="sub-label">上下倾斜<span class="val num" id="valPerspY"></span></div>
-            <input type="range" id="rgPerspY" min="-100" max="100" step="1" aria-label="文字上下倾斜">
-          </div>
-
-          <div class="field">
-            <div class="field-title">翻页过场<span class="helper">完整字一闪而过</span></div>
-            <select id="selFlip" aria-label="翻页过场" class="select">
-              <option value="none">无</option>
-              <option value="book_turn">右翻</option>
-              <option value="book_turn_l">左翻</option>
-              <option value="book_turn_t">上翻</option>
-              <option value="book_turn_b">下翻</option>
-              <option value="book_turn_br">右下角</option>
-              <option value="book_turn_bl">左下角</option>
-            </select>
-            <div class="row2" style="margin-top:10px">
-              <div>
-                <div class="sub-label">翻页时长</div>
-                <select id="selFlipDur" aria-label="翻页时长" class="select">
-                  <option value="0.3">0.3 秒</option>
-                  <option value="0.5">0.5 秒</option>
-                  <option value="0.8">0.8 秒</option>
-                  <option value="1.2">1.2 秒</option>
-                </select>
-              </div>
-              <div>
-                <div class="sub-label">翻页间隔</div>
-                <select id="selFlipInt" aria-label="翻页间隔" class="select">
-                  <option value="0">只一次</option>
-                  <option value="3">3 秒</option>
-                  <option value="5">5 秒</option>
-                  <option value="8">8 秒</option>
-                </select>
-              </div>
-            </div>
-            <p class="hint adv-note" id="flipAntiNote" hidden>防AI增强开启时不可用：翻页会露出完整字</p>
-          </div>
-
-          <div class="switch-field">
-            <div class="switch-text">
-              <b>防AI增强</b>
-              <span>持久遮挡 + 字符微动 + 扰动</span>
-            </div>
-            <label class="switch"><input type="checkbox" id="swAnti" aria-label="防AI增强"><span class="track"></span></label>
-          </div>
-          <div id="antiRows" hidden>
-            <div class="sub-label">字符微动幅度<span class="val num" id="valMotion"></span></div>
-            <input type="range" id="rgMotion" aria-label="字符微动幅度" min="0" max="20" step="1">
-            <div class="sub-label">对抗扰动强度<span class="val num" id="valAdv"></span></div>
-            <input type="range" id="rgAdv" aria-label="对抗扰动强度" min="0" max="100" step="1">
-            <p class="hint adv-note">仅视频导出生效；无法保证绝对无法被识别，请合规使用</p>
-          </div>
-
+        <div class="field">
+          <div class="field-title">条纹宽度<span class="val num" id="valStripe"></span></div>
+          <input type="range" id="rgStripe" min="4" max="60" step="1" aria-label="条纹宽度">
         </div>
-      </details>
 
-      <div class="progress" id="progress" hidden>
-        <div class="bar"><div class="fill" id="progressBar"></div></div>
-        <span class="label num" id="progressLabel">0%</span>
-      </div>
+        <div class="field">
+          <div class="field-title">遮挡强度<span class="val num" id="valOcclusion"></span></div>
+          <input type="range" id="rgOcclusion" min="0" max="100" step="1" aria-label="遮挡强度">
+        </div>
 
-      <button type="button" id="btnExport" class="primary">生成并保存</button>
-      <p class="hint">连续播放时能读出文字，暂停或截屏只能看到碎片</p>
+        <div class="field">
+          <div class="field-title">速度<span class="val num" id="valSpeed"></span></div>
+          <input type="range" id="rgSpeed" min="0.3" max="3" step="0.1" aria-label="速度">
+        </div>
+      </section>
+
+      <section id="tab-effect" class="tab-page" data-tab="effect" role="tabpanel" aria-label="效果">
+        <h2 class="sec-title">效果</h2>
+
+        <div class="field">
+          <div class="field-title">压印<span class="helper">字符立体效果</span></div>
+          <div class="chips" id="embossChips">
+            <button type="button" data-v="none" class="on">无</button>
+            <button type="button" data-v="engrave">雕刻</button>
+            <button type="button" data-v="pressed">凸起</button>
+          </div>
+          <div class="sub-label">压印清晰度<span class="val num" id="valClarity"></span></div>
+          <input type="range" id="rgClarity" min="0" max="100" step="1" aria-label="压印清晰度">
+        </div>
+
+        <div class="switch-field">
+          <div class="switch-text">
+            <b>逐个字符</b>
+            <span>按输入顺序循环显示</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="swSeq" aria-label="逐个字符"><span class="track"></span></label>
+        </div>
+        <div id="seqRows" hidden>
+          <div class="sub-label">依次速度<span class="val num" id="valSeqSpeed"></span></div>
+          <input type="range" id="rgSeqSpeed" min="0.2" max="15" step="0.1" aria-label="依次速度">
+          <div class="sub-label">每次显示<span class="val num" id="valSeqChars"></span></div>
+          <input type="range" id="rgSeqChars" min="1" max="10" step="1" aria-label="每次显示">
+        </div>
+
+        <div class="switch-field">
+          <div class="switch-text">
+            <b>数字变形</b>
+            <span>扭曲 0-9，专克数字</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="swDigit" aria-label="数字变形"><span class="track"></span></label>
+        </div>
+
+        <div class="field">
+          <div class="field-title">翻页过场<span class="helper">完整字一闪而过</span></div>
+          <select id="selFlip" class="select" aria-label="翻页过场">
+            <option value="none">无</option>
+            <option value="book_turn">右翻</option>
+            <option value="book_turn_l">左翻</option>
+            <option value="book_turn_t">上翻</option>
+            <option value="book_turn_b">下翻</option>
+            <option value="book_turn_br">右下角</option>
+            <option value="book_turn_bl">左下角</option>
+          </select>
+          <div class="row2" style="margin-top:10px">
+            <div>
+              <div class="sub-label">翻页时长</div>
+              <select id="selFlipDur" class="select" aria-label="翻页时长">
+                <option value="0.3">0.3 秒</option>
+                <option value="0.5">0.5 秒</option>
+                <option value="0.8">0.8 秒</option>
+                <option value="1.2">1.2 秒</option>
+              </select>
+            </div>
+            <div>
+              <div class="sub-label">翻页间隔</div>
+              <select id="selFlipInt" class="select" aria-label="翻页间隔">
+                <option value="0">只一次</option>
+                <option value="3">3 秒</option>
+                <option value="5">5 秒</option>
+                <option value="8">8 秒</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint adv-note" id="flipAntiNote" hidden>防AI增强开启时不可用：翻页会露出完整字</p>
+        </div>
+
+        <div class="switch-field">
+          <div class="switch-text">
+            <b>防AI增强</b>
+            <span>持久遮挡 + 字符微动 + 扰动</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="swAnti" aria-label="防AI增强"><span class="track"></span></label>
+        </div>
+        <div id="antiRows" hidden>
+          <div class="sub-label">字符微动幅度<span class="val num" id="valMotion"></span></div>
+          <input type="range" id="rgMotion" min="0" max="20" step="1" aria-label="字符微动幅度">
+          <div class="sub-label">对抗扰动强度<span class="val num" id="valAdv"></span></div>
+          <input type="range" id="rgAdv" min="0" max="100" step="1" aria-label="对抗扰动强度">
+          <p class="hint adv-note">仅视频导出生效；无法保证绝对无法被识别，请合规使用</p>
+        </div>
+      </section>
+
+      <section id="tab-export" class="tab-page" data-tab="export" role="tabpanel" aria-label="导出">
+        <h2 class="sec-title">导出</h2>
+
+        <div class="field">
+          <div class="field-title">保存格式</div>
+          <div class="chips" id="fmtChips">
+            <button type="button" data-v="mp4" class="on">MP4 视频</button>
+            <button type="button" data-v="gif">GIF 动图</button>
+          </div>
+        </div>
+
+        <div class="field" id="gifSizeField" hidden>
+          <div class="field-title">GIF 尺寸</div>
+          <select id="selGifEdge" class="select" aria-label="GIF 尺寸">
+            <option value="480">高清 480</option>
+            <option value="500">微信表情 500</option>
+            <option value="360">抖音表情 360</option>
+          </select>
+        </div>
+
+        <div class="field" id="durationField">
+          <div class="field-title">视频时长</div>
+          <select id="selDuration" class="select" aria-label="视频时长">
+            <option value="5">5 秒</option>
+            <option value="8">8 秒</option>
+            <option value="10">10 秒</option>
+            <option value="15">15 秒</option>
+          </select>
+        </div>
+
+        <div class="progress" id="progress" hidden>
+          <div class="bar"><div class="fill" id="progressBar"></div></div>
+          <span class="label num" id="progressLabel">0%</span>
+        </div>
+
+        <button type="button" id="btnExport" class="primary">生成并保存</button>
+        <p class="hint">连续播放时能读出文字，暂停或截屏只能看到碎片</p>
+      </section>
+
     </div>
   </main>
+
+  <nav id="tabbar" role="tablist" aria-label="功能切换">
+    <button type="button" role="tab" data-tab="text" aria-controls="tab-text" aria-selected="true" class="on">文字</button>
+    <button type="button" role="tab" data-tab="visual" aria-controls="tab-visual" aria-selected="false">画面</button>
+    <button type="button" role="tab" data-tab="effect" aria-controls="tab-effect" aria-selected="false">效果</button>
+    <button type="button" role="tab" data-tab="export" aria-controls="tab-export" aria-selected="false">导出</button>
+  </nav>
 
   <div id="toast"></div>
 </div>
 
-<script type="module" src="./js/app.js?v=11"></script>
+<script type="module" src="./js/app.js?v=12"></script>
 </body>
 </html>
