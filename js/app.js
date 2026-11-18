@@ -200,7 +200,12 @@ function resetPreview() {
   previewClock = 0;
   lastT = 0;
   if (canvas && previewTarget) {
-    renderInto(previewTarget, scene, previewScale, 0, 0, E.FPS * E.DURATION, true);
+    const total = E.FPS * E.DURATION;
+    // 开了翻页时，静止画面先停在“文字页”，避免一打开只看到绿幕
+    const start = (state.flip !== 'none' && state.flipDur > 0)
+      ? Math.min(total - 1, Math.round((0.5 + state.flipDur + 0.05) * E.FPS))
+      : 0;
+    renderInto(previewTarget, scene, previewScale, start, 0, total, true);
   }
 }
 

@@ -255,10 +255,11 @@ input[type='color'] {
 
 /* 手机上：导出按钮吸底，滚动时始终可点 */
 @media (max-width: 759px) {
+  #controls { padding-bottom: 72px; }
   .primary {
     position: sticky;
     bottom: calc(10px + env(safe-area-inset-bottom));
-    box-shadow: 0 -6px 18px rgba(0, 0, 0, .35);
+    box-shadow: 0 -16px 20px 14px var(--bg), 0 -6px 18px rgba(0, 0, 0, .35);
   }
 }
 
