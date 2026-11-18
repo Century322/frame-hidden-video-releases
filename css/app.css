@@ -100,6 +100,8 @@ main {
 
 /* 参数 */
 #controls { display: flex; flex-direction: column; gap: 16px; padding-bottom: 8px; }
+/* 桌面端控制栏有固定高度且可滚动，子项不能被 flex 压缩（否则折叠面板会被压扁） */
+#controls > * { flex: none; }
 .field-title {
   display: flex;
   align-items: baseline;

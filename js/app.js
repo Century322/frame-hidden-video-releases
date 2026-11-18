@@ -40,6 +40,7 @@ let phase = 0, previewClock = 0, rafId = null, lastT = 0;
 let exporting = false;
 let fullW = 1080, fullH = 1920, previewScale = 1;
 let bgUrl = null;
+let progressHideTimer = null;
 
 /* ------------------------------------------------ 基础工具 --- */
 function toast(msg) {
@@ -569,6 +570,7 @@ async function doExport() {
   const wasPlaying = state.playing;
   state.playing = false;
   window.__lastExportError = null;
+  clearTimeout(progressHideTimer);
   $('btnExport').disabled = true;
   $('btnExport').textContent = '生成中…';
   phase = 0;
@@ -579,7 +581,7 @@ async function doExport() {
     setProgress(100, '完成');
     await saveBlob(blob, name);
     toast(wasGif ? 'GIF 已生成' : '视频已生成');
-    setTimeout(() => setProgress(null), 1500);
+    progressHideTimer = setTimeout(() => setProgress(null), 1500);
   } catch (ex) {
     console.error(ex);
     window.__lastExportError = (ex && ex.stack) ? String(ex.stack) : String(ex);

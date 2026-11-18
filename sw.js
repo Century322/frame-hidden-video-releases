@@ -1,5 +1,5 @@
 /* 帧隐视频 · 网页版离线缓存（在线时永远以网络上的最新版本为准） */
-const CACHE = 'framehidden-web-v8';
+const CACHE = 'framehidden-web-v9';
 const ASSETS = [
   './',
   './index.html',
