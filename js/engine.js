@@ -527,11 +527,6 @@ function compositeLayer(bgData, canvas, ox, oy, pre) {
   return any;
 }
 
-/* 把一个图层合成到整帧背景（兼容旧调用） */
-export function compositeFrame(bgData, textLayer, pre) {
-  return compositeLayer(bgData, textLayer.canvas, textLayer.x0, textLayer.y0, pre);
-}
-
 /* 合成选中的字符层；picks 为空则全部显示 */
 export function compositeChars(bgData, chars, pre, opts = {}) {
   const { picks = null, motionAmp = 0, frameIndex = 0, offsetX = 0, offsetY = 0 } = opts;

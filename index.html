@@ -12,7 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./css/app.css?v=13">
+<link rel="stylesheet" href="./css/app.css?v=14">
 </head>
 <body>
 <div id="app">
@@ -23,6 +23,7 @@
   </header>
 
   <main>
+    <div id="contentCard">
     <div id="stage">
       <div id="canvasHolder"></div>
       <div id="bgVideoHolder" aria-hidden="true"></div>
@@ -39,7 +40,6 @@
 
     <div id="controls">
       <div id="drawerHead">
-        <div class="drawer-handle" aria-hidden="true"></div>
         <div class="drawer-row">
           <b id="drawerTitle">字体</b>
           <button type="button" id="drawerClose">完成</button>
@@ -252,6 +252,7 @@
       </div>
       <button type="button" id="btnExport" class="primary">生成并保存</button>
     </div>
+    </div>
   </main>
 
   <nav id="tabbar" role="tablist" aria-label="功能切换">
@@ -265,6 +266,6 @@
   <div id="toast"></div>
 </div>
 
-<script type="module" src="./js/app.js?v=13"></script>
+<script type="module" src="./js/app.js?v=14"></script>
 </body>
 </html>

@@ -400,6 +400,12 @@ function tick(t) {
     lastT = t;
     if (dt > 0) {
       const total = previewTotal();
+      const maxVideoT = total / E.FPS;
+      const v = state.bgVideo;
+      if (state.bgKind === 'video' && v && state.playing
+          && v.currentTime >= maxVideoT - 0.02) {
+        try { v.currentTime = 0; } catch (e) {}
+      }
       const fi = Math.floor(previewClock * E.FPS) % total;
       renderInto(previewTarget, scene, previewScale, fi, phase, total, true);
       const frames = dt * E.FPS;
@@ -918,9 +924,15 @@ function bindUI() {
       closeDrawer();
     }
   });
+  let lastMobile = isMobile();
   window.addEventListener('resize', () => {
     layoutCanvas();
-    closeDrawer();
+    closeDropdown();
+    const nowMobile = isMobile();
+    if (nowMobile !== lastMobile) {
+      closeDrawer();
+      lastMobile = nowMobile;
+    }
   });
 }
 

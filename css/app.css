@@ -70,10 +70,11 @@ main {
   display: grid;
   place-items: center;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 16px;
   overflow: hidden;
   padding: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
 }
 #canvasHolder { display: grid; place-items: center; max-width: 100%; max-height: 100%; }
 #bgVideoHolder {
@@ -139,7 +140,6 @@ main {
 #controls > * { flex: none; }
 #controls[inert] { pointer-events: none; opacity: .85; }
 input[type='range']:disabled { opacity: .4; }
-.select:disabled { opacity: .5; }
 .field-title {
   display: flex;
   align-items: baseline;
@@ -385,17 +385,6 @@ input[type='color'] {
   background: var(--primary-fg);
 }
 
-.select {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font-family: inherit;
-  font-size: 13px;
-  padding: 10px 12px;
-  outline: none;
-}
 .sub-label {
   display: flex;
   align-items: baseline;
@@ -421,9 +410,10 @@ input[type='color'] {
   flex: none;
   margin-top: auto;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 14px;
   padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .26);
 }
 .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .export-field { min-width: 0; }
@@ -506,8 +496,19 @@ input[type='color'] {
   :root { --nav-h: calc(52px + env(safe-area-inset-bottom)); }
 
   main {
-    padding: 12px 16px 8px;
+    background: var(--surface);
+    padding: 10px 12px 8px;
     overflow: hidden;
+  }
+  #contentCard {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--bg);
+    border-radius: 24px;
+    padding: 12px;
   }
   #stage {
     flex: 1;
@@ -545,15 +546,8 @@ input[type='color'] {
     top: 0;
     z-index: 3;
     background: var(--surface);
-    padding-top: 8px;
+    padding-top: 14px;
     margin-bottom: 8px;
-  }
-  .drawer-handle {
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--soft);
-    margin: 0 auto 8px;
   }
   .drawer-row { display: flex; align-items: center; justify-content: space-between; }
   .drawer-row b { font-size: 14px; }
@@ -583,7 +577,6 @@ input[type='color'] {
     height: var(--nav-h);
     padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
     background: var(--surface);
-    border-top: 1px solid var(--line);
     position: relative;
     z-index: 80;
     box-sizing: border-box;
@@ -619,6 +612,7 @@ input[type='color'] {
 @media (min-width: 760px) {
   main {
     display: grid;
+    background: transparent;
     grid-template-columns: minmax(0, 1fr) 380px;
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
@@ -629,6 +623,7 @@ input[type='color'] {
     padding: 12px 16px;
     overflow: hidden;
   }
+  #contentCard { display: contents; }
   #stage {
     grid-area: stage;
     max-height: none;
@@ -679,4 +674,12 @@ input[type='color'] {
     border-color: transparent;
   }
   #controls .tab-page:not(.active) { display: none; }
+}
+
+/* 矮屏手机：收紧主页面，保证导出条和导航都在首屏 */
+@media (max-width: 759px) and (max-height: 660px) {
+  #stage { min-height: 150px; max-height: 42vh; }
+  #textModule .hint { display: none; }
+  #exportBar { padding: 8px; }
+  #exportBar .primary { margin-top: 6px; }
 }
