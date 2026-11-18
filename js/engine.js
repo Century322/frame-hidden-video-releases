@@ -534,7 +534,7 @@ export function compositeFrame(bgData, textLayer, pre) {
 
 /* 合成选中的字符层；picks 为空则全部显示 */
 export function compositeChars(bgData, chars, pre, opts = {}) {
-  const { picks = null, motionAmp = 0, frameIndex = 0 } = opts;
+  const { picks = null, motionAmp = 0, frameIndex = 0, offsetX = 0, offsetY = 0 } = opts;
   const n = chars.length;
   if (!n) return false;
   const list = picks && picks.length ? picks : Array.from({ length: n }, (_, i) => i);
@@ -548,12 +548,96 @@ export function compositeChars(bgData, chars, pre, opts = {}) {
       dx = Math.round(motionAmp * Math.sin(2 * Math.PI * frameIndex / 41 + 1.3 * i));
       dy = Math.round(motionAmp * Math.cos(2 * Math.PI * frameIndex / 29 + 0.9 * i));
     }
-    if (compositeLayer(bgData, layer.canvas, layer.x + dx, layer.y + dy, pre)) any = true;
+    if (compositeLayer(bgData, layer.canvas, layer.x + dx + offsetX,
+      layer.y + dy + offsetY, pre)) any = true;
   }
   return any;
 }
 
-/* 逐个字符：按帧号循环取 seqChars 个字符 */
+/* 透视版字符合成：每个字符按整体 homography 的局部仿射绘制。
+   perspX/perspY ∈ [-0.35,0.35]：左右 / 上下倾斜；scratchCtx 为同尺寸透明画布。 */
+export function compositeCharsWarp(bgData, chars, pre, opts, scratchCtx) {
+  const {
+    picks = null, motionAmp = 0, frameIndex = 0, offsetX = 0, offsetY = 0,
+    perspX = 0, perspY = 0,
+  } = opts;
+  const n = chars.length;
+  if (!n || !scratchCtx) return false;
+  const { width: w, height: h } = bgData;
+  const cv = scratchCtx.canvas;
+  if (cv.width !== w || cv.height !== h) {
+    cv.width = w; cv.height = h;
+  }
+  scratchCtx.setTransform(1, 0, 0, 1, 0, 0);
+  scratchCtx.clearRect(0, 0, w, h);
+  const list = picks && picks.length ? picks : Array.from({ length: n }, (_, i) => i);
+  const halfW = w / 2, halfH = h / 2;
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+
+  for (let i = 0; i < list.length; i++) {
+    const layer = chars[list[i]];
+    if (!layer) continue;
+    let dx = 0, dy = 0;
+    if (motionAmp > 0) {
+      dx = Math.round(motionAmp * Math.sin(2 * Math.PI * frameIndex / 41 + 1.3 * i));
+      dy = Math.round(motionAmp * Math.cos(2 * Math.PI * frameIndex / 29 + 0.9 * i));
+    }
+    const cw = layer.canvas.width, ch = layer.canvas.height;
+    const u = layer.x + dx + offsetX + cw / 2;
+    const v = layer.y + dy + offsetY + ch / 2;
+    const X = (u - halfW) / halfW;
+    const Y = (v - halfH) / halfH;
+    const den = Math.max(0.25, 1 + perspX * X + perspY * Y);
+    const den2 = den * den;
+    const dcx = halfW + (X / den) * halfW;
+    const dcy = halfH + (Y / den) * halfH;
+    const a = (den - X * perspX) / den2;
+    const c = (w / h) * (-X * perspY) / den2;
+    const b = (h / w) * (-Y * perspX) / den2;
+    const d = (den - Y * perspY) / den2;
+    const x0 = dcx - a * cw / 2 - c * ch / 2;
+    const y0 = dcy - b * cw / 2 - d * ch / 2;
+    scratchCtx.setTransform(a, b, c, d, x0, y0);
+    scratchCtx.drawImage(layer.canvas, 0, 0);
+    const x1 = x0 + a * cw, y1 = y0 + b * cw;
+    const x2 = x0 + c * ch, y2 = y0 + d * ch;
+    const x3 = x1 + c * ch, y3 = y1 + d * ch;
+    minX = Math.min(minX, x0, x1, x2, x3);
+    minY = Math.min(minY, y0, y1, y2, y3);
+    maxX = Math.max(maxX, x0, x1, x2, x3);
+    maxY = Math.max(maxY, y0, y1, y2, y3);
+  }
+  scratchCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+  const bx = Math.max(0, Math.floor(minX));
+  const by = Math.max(0, Math.floor(minY));
+  const bw = Math.min(w, Math.ceil(maxX)) - bx;
+  const bh = Math.min(h, Math.ceil(maxY)) - by;
+  if (bw <= 0 || bh <= 0) return false;
+  const layerData = scratchCtx.getImageData(bx, by, bw, bh);
+  const t = layerData.data;
+  const { data, width: bgW } = bgData;
+  let any = false;
+  for (let ty = 0; ty < bh; ty++) {
+    const y = by + ty;
+    const rowT = ty * bw * 4;
+    const rowB = y * bgW * 4;
+    for (let tx = 0; tx < bw; tx++) {
+      const ta = t[rowT + tx * 4 + 3];
+      if (ta === 0) continue;
+      const x = bx + tx;
+      if (!isVisible(pre, x, y)) continue;
+      const bi = rowB + x * 4;
+      const ti = rowT + tx * 4;
+      const alpha = ta / 255;
+      data[bi] = data[bi] * (1 - alpha) + t[ti] * alpha;
+      data[bi + 1] = data[bi + 1] * (1 - alpha) + t[ti + 1] * alpha;
+      data[bi + 2] = data[bi + 2] * (1 - alpha) + t[ti + 2] * alpha;
+      any = true;
+    }
+  }
+  return any;
+}
 export function seqPicks(n, frameIndex, totalFrames, seqSpeed, seqChars) {
   if (!n) return [];
   const k = Math.max(1, Math.min(Math.round(seqChars), n));

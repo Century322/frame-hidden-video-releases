@@ -3,6 +3,16 @@ import * as E from './engine.js';
 
 const $ = (id) => document.getElementById(id);
 const PREVIEW_MAX = 720;      // 预览最长边，降低手机合成开销
+const PREFS_KEY = 'framehidden.prefs.v2';
+
+const ASPECTS = {
+  '9:16': [9, 16],
+  '16:9': [16, 9],
+  '1:1': [1, 1],
+  '4:5': [4, 5],
+  '3:4': [3, 4],
+  '21:9': [21, 9],
+};
 
 const state = {
   text: '测试隐藏文字',
@@ -16,7 +26,10 @@ const state = {
   color: '#FFFFFF',
   aspect: [9, 16],
   fmt: 'mp4',
-  bgImage: null,          // Image 对象或 null（null = 默认绿幕）
+  bgImage: null,          // Image 对象或 null
+  bgVideo: null,          // HTMLVideoElement 或 null
+  bgVideoFile: null,      // 原视频 File，导出原声用
+  bgKind: 'none',         // none | image | video
   playing: true,
 
   emboss: 'none',         // none | engrave | pressed
@@ -33,6 +46,14 @@ const state = {
   motion: 6,
   adv: 50,
   gifEdge: 480,
+  duration: 5,
+  customW: 4,
+  customH: 5,
+  customAspect: false,
+  perspX: 0,
+  perspY: 0,
+  offsetX: 0,
+  offsetY: 0,
 };
 
 let canvas;
@@ -42,6 +63,7 @@ let phase = 0, previewClock = 0, rafId = null, lastT = 0;
 let exporting = false;
 let fullW = 1080, fullH = 1920, previewScale = 1;
 let bgUrl = null;
+let bgToken = 0;
 let progressHideTimer = null;
 
 /* ------------------------------------------------ 基础工具 --- */
@@ -69,9 +91,99 @@ function fullSize() {
 function textLines() {
   return (state.text || '').replace(/\n+$/, '').split('\n');
 }
+function previewTotal() {
+  let sec = state.fmt === 'gif' ? E.GIF_DURATION : state.duration;
+  if (state.fmt !== 'gif' && state.bgKind === 'video' && state.bgVideo
+      && isFinite(state.bgVideo.duration) && state.bgVideo.duration > 0) {
+    sec = Math.min(sec, state.bgVideo.duration);
+  }
+  return Math.max(1, Math.round(E.FPS * sec));
+}
 function occlusion() {
   const v = state.anti ? Math.max(state.occlusion, 70) : state.occlusion;
   return v / 100;
+}
+function clamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+function aspectKey() {
+  if (state.customAspect) return 'custom';
+  const k = state.aspect.join(':');
+  return ASPECTS[k] ? k : 'custom';
+}
+
+/* ------------------------------------------------ 参数记忆 --- */
+const PREF_KEYS = [
+  'text', 'mode', 'stripe', 'occlusion', 'speed', 'fontSize', 'fontWidth',
+  'opacity', 'color', 'aspect', 'fmt', 'emboss', 'clarity', 'seq', 'seqSpeed',
+  'seqChars', 'digit', 'flip', 'flipDur', 'flipInt', 'anti', 'motion', 'adv',
+  'gifEdge', 'duration', 'customW', 'customH', 'customAspect',
+  'perspX', 'perspY', 'offsetX', 'offsetY',
+];
+
+function loadPrefs() {
+  let p;
+  try {
+    p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+  } catch (e) {
+    return;
+  }
+  if (!p || typeof p !== 'object') return;
+  const num = (v, lo, hi, def) => (typeof v === 'number' && isFinite(v))
+    ? clamp(v, lo, hi) : def;
+  if (typeof p.text === 'string') state.text = p.text.slice(0, 2000);
+  if (E.MODES.some(([k]) => k === p.mode)) state.mode = p.mode;
+  state.stripe = num(p.stripe, 4, 60, state.stripe);
+  state.occlusion = num(p.occlusion, 0, 100, state.occlusion);
+  state.speed = num(p.speed, 0.3, 3, state.speed);
+  state.fontSize = num(p.fontSize, 40, 300, state.fontSize);
+  state.fontWidth = num(p.fontWidth, 0.5, 2, state.fontWidth);
+  state.opacity = num(p.opacity, 0, 100, state.opacity);
+  if (typeof p.color === 'string' && /^#[0-9a-f]{6}$/i.test(p.color)) state.color = p.color;
+  if (Array.isArray(p.aspect) && p.aspect.length === 2
+      && p.aspect.every((v) => typeof v === 'number' && isFinite(v) && v > 0 && v <= 200)) {
+    state.aspect = [p.aspect[0], p.aspect[1]];
+  }
+  state.customW = Math.round(num(p.customW, 1, 200, state.customW));
+  state.customH = Math.round(num(p.customH, 1, 200, state.customH));
+  state.customAspect = !!p.customAspect;
+  if (!ASPECTS[state.aspect.join(':')]) {
+    state.customAspect = true;
+    state.customW = Math.round(state.aspect[0]);
+    state.customH = Math.round(state.aspect[1]);
+  }
+  if (p.fmt === 'mp4' || p.fmt === 'gif') state.fmt = p.fmt;
+  if (['none', 'engrave', 'pressed'].includes(p.emboss)) state.emboss = p.emboss;
+  state.clarity = num(p.clarity, 0, 100, state.clarity);
+  state.seq = !!p.seq;
+  state.seqSpeed = num(p.seqSpeed, 0.2, 15, state.seqSpeed);
+  state.seqChars = Math.round(num(p.seqChars, 1, 10, state.seqChars));
+  state.digit = !!p.digit;
+  if (E.FLIP_MODES.some(([k]) => k === p.flip)) state.flip = p.flip;
+  state.flipDur = num(p.flipDur, 0.3, 1.2, state.flipDur);
+  state.flipInt = [0, 3, 5, 8].includes(p.flipInt) ? p.flipInt : state.flipInt;
+  state.anti = !!p.anti;
+  state.motion = num(p.motion, 0, 20, state.motion);
+  state.adv = num(p.adv, 0, 100, state.adv);
+  state.gifEdge = [480, 500, 360].includes(p.gifEdge) ? p.gifEdge : state.gifEdge;
+  state.duration = [5, 8, 10, 15].includes(p.duration) ? p.duration : state.duration;
+  state.perspX = num(p.perspX, -100, 100, 0);
+  state.perspY = num(p.perspY, -100, 100, 0);
+  state.offsetX = num(p.offsetX, -0.45, 0.45, 0);
+  state.offsetY = num(p.offsetY, -0.45, 0.45, 0);
+}
+
+function savePrefs() {
+  const p = {};
+  for (const k of PREF_KEYS) p[k] = state[k];
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+  } catch (e) {}
+}
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(savePrefs, 350);
 }
 
 /* ------------------------------------------------ 画布与场景 --- */
@@ -154,12 +266,53 @@ function rebuildScene() {
 function drawBackground(c, w, h) {
   c.fillStyle = '#00FF00';                    // 默认绿幕
   c.fillRect(0, 0, w, h);
-  if (state.bgImage) {
-    const iw = state.bgImage.width, ih = state.bgImage.height;
-    const sc = Math.max(w / iw, h / ih);
-    const nw = Math.round(iw * sc), nh = Math.round(ih * sc);
-    c.drawImage(state.bgImage, (w - nw) / 2, (h - nh) / 2, nw, nh);
+  const video = state.bgKind === 'video' ? state.bgVideo : null;
+  const src = video && video.readyState >= 2 ? video : state.bgImage;
+  if (!src) return;
+  const iw = video ? video.videoWidth : (src.naturalWidth || src.width);
+  const ih = video ? video.videoHeight : (src.naturalHeight || src.height);
+  if (!iw || !ih) return;
+  const sc = Math.max(w / iw, h / ih);
+  const nw = Math.round(iw * sc), nh = Math.round(ih * sc);
+  c.drawImage(src, (w - nw) / 2, (h - nh) / 2, nw, nh);
+}
+
+function syncBgVideo() {
+  const v = state.bgVideo;
+  if (!v) return;
+  if (state.playing && !exporting) v.play().catch(() => {});
+  else v.pause();
+}
+
+function clearBackground() {
+  bgToken++;
+  if (state.bgVideo) {
+    try { state.bgVideo.pause(); } catch (e) {}
+    state.bgVideo.removeAttribute('src');
+    try { state.bgVideo.load(); } catch (e) {}
+    state.bgVideo.remove();
   }
+  state.bgVideo = null;
+  state.bgVideoFile = null;
+  state.bgImage = null;
+  state.bgKind = 'none';
+  if (bgUrl) {
+    URL.revokeObjectURL(bgUrl);
+    bgUrl = null;
+  }
+}
+
+let warpCanvas = null, warpCtx = null;
+function getWarpCtx(w, h) {
+  if (!warpCanvas) {
+    warpCanvas = document.createElement('canvas');
+    warpCtx = warpCanvas.getContext('2d', { willReadFrequently: true });
+  }
+  if (warpCanvas.width !== w || warpCanvas.height !== h) {
+    warpCanvas.width = w;
+    warpCanvas.height = h;
+  }
+  return warpCtx;
 }
 
 function compositeText(c, w, h, s, scale, frameIndex, ph, totalFrames) {
@@ -170,11 +323,21 @@ function compositeText(c, w, h, s, scale, frameIndex, ph, totalFrames) {
   const picks = state.seq
     ? E.seqPicks(s.chars.length, frameIndex, totalFrames, state.seqSpeed, state.seqChars)
     : null;
-  E.compositeChars(img, s.chars, pre, {
+  const opts = {
     picks,
     motionAmp: (state.anti ? state.motion : 0) * scale,
     frameIndex,
-  });
+    offsetX: state.offsetX * w,
+    offsetY: state.offsetY * h,
+  };
+  const px = state.perspX / 100 * 0.35;
+  const py = state.perspY / 100 * 0.35;
+  if (Math.abs(px) > 0.0005 || Math.abs(py) > 0.0005) {
+    E.compositeCharsWarp(img, s.chars, pre,
+      { ...opts, perspX: px, perspY: py }, getWarpCtx(w, h));
+  } else {
+    E.compositeChars(img, s.chars, pre, opts);
+  }
   c.putImageData(img, 0, 0);
 }
 
@@ -203,13 +366,32 @@ function resetPreview() {
   previewClock = 0;
   lastT = 0;
   if (canvas && previewTarget) {
-    const total = E.FPS * E.DURATION;
+    const total = previewTotal();
     // 开了翻页时，静止画面先停在“文字页”，避免一打开只看到绿幕
     const start = (state.flip !== 'none' && state.flipDur > 0)
       ? Math.min(total - 1, Math.round((0.5 + state.flipDur + 0.05) * E.FPS))
       : 0;
     renderInto(previewTarget, scene, previewScale, start, 0, total, true);
+    scheduleSave();
   }
+}
+
+function renderCurrentPreview() {
+  if (!canvas || !previewTarget) return;
+  const total = previewTotal();
+  const fi = Math.floor(previewClock * E.FPS) % total;
+  renderInto(previewTarget, scene, previewScale, fi, phase, total, true);
+}
+
+function setOffset(x, y) {
+  state.offsetX = clamp(x, -0.45, 0.45);
+  state.offsetY = clamp(y, -0.45, 0.45);
+  $('btnPosReset').hidden = Math.abs(state.offsetX) < 0.002 && Math.abs(state.offsetY) < 0.002;
+  renderCurrentPreview();
+}
+
+function updatePosUi() {
+  $('btnPosReset').hidden = Math.abs(state.offsetX) < 0.002 && Math.abs(state.offsetY) < 0.002;
 }
 
 function tick(t) {
@@ -217,7 +399,7 @@ function tick(t) {
     const dt = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0;
     lastT = t;
     if (dt > 0) {
-      const total = E.FPS * E.DURATION;
+      const total = previewTotal();
       const fi = Math.floor(previewClock * E.FPS) % total;
       renderInto(previewTarget, scene, previewScale, fi, phase, total, true);
       const frames = dt * E.FPS;
@@ -270,6 +452,50 @@ function bindSelect(id, getV, setV) {
 
 function syncFmtFields() {
   $('gifSizeField').hidden = state.fmt !== 'gif';
+  $('durationField').hidden = state.fmt !== 'mp4';
+}
+
+function syncAspectFields() {
+  const custom = state.customAspect;
+  $('customAspectRow').hidden = !custom;
+  if (custom) {
+    $('inpCustomW').value = state.customW;
+    $('inpCustomH').value = state.customH;
+  }
+}
+
+function applyAntiUi() {
+  $('swAnti').checked = state.anti;
+  $('antiRows').hidden = !state.anti;
+  if (state.anti) {
+    // 翻页会露出完整字，与“任意单帧不出现完整字”冲突，直接禁用
+    if (state.flip !== 'none') {
+      state.flipBeforeAnti = state.flip;
+      state.flip = 'none';
+    }
+    $('selFlip').value = 'none';
+    $('selFlip').disabled = true;
+    $('selFlipDur').disabled = true;
+    $('selFlipInt').disabled = true;
+    $('flipAntiNote').hidden = false;
+    $('rgOcclusion').disabled = true;
+    if (state.occlusion < 70) {
+      state.occlusion = 70;
+      $('rgOcclusion').value = 70;
+      fillRange($('rgOcclusion'), $('valOcclusion'), (v) => v + '%');
+    }
+  } else {
+    $('selFlip').disabled = false;
+    $('selFlipDur').disabled = false;
+    $('selFlipInt').disabled = false;
+    $('flipAntiNote').hidden = true;
+    $('rgOcclusion').disabled = false;
+    if (state.flipBeforeAnti && state.flipBeforeAnti !== 'none') {
+      state.flip = state.flipBeforeAnti;
+      $('selFlip').value = state.flip;
+    }
+    state.flipBeforeAnti = 'none';
+  }
 }
 
 function bindUI() {
@@ -291,11 +517,29 @@ function bindUI() {
     resetPreview();
   });
 
-  bindChips('aspectChips', () => state.aspect.join(':'), (v) => {
-    const [a, b] = v.split(':').map(Number);
-    state.aspect = [a, b];
+  bindChips('aspectChips', aspectKey, (v) => {
+    if (v === 'custom') {
+      state.customAspect = true;
+      state.aspect = [state.customW, state.customH];
+    } else {
+      state.customAspect = false;
+      state.aspect = ASPECTS[v].slice();
+    }
+    syncAspectFields();
     setupCanvas();
   });
+  const applyCustomAspect = () => {
+    const w = clamp(parseInt($('inpCustomW').value, 10) || 1, 1, 200);
+    const h = clamp(parseInt($('inpCustomH').value, 10) || 1, 1, 200);
+    state.customAspect = true;
+    state.customW = w;
+    state.customH = h;
+    state.aspect = [w, h];
+    syncAspectFields();
+    setupCanvas();
+  };
+  $('inpCustomW').addEventListener('change', applyCustomAspect);
+  $('inpCustomH').addEventListener('change', applyCustomAspect);
   bindChips('fmtChips', () => state.fmt, (v) => { state.fmt = v; },
     () => { syncFmtFields(); resetPreview(); });
 
@@ -314,6 +558,10 @@ function bindUI() {
 
   bindRange('rgClarity', 'valClarity', () => state.clarity, (v) => { state.clarity = v; },
     (v) => v + '%', true);
+  bindRange('rgPerspX', 'valPerspX', () => state.perspX, (v) => { state.perspX = v; },
+    (v) => (v > 0 ? '+' + v : String(v)), false);
+  bindRange('rgPerspY', 'valPerspY', () => state.perspY, (v) => { state.perspY = v; },
+    (v) => (v > 0 ? '+' + v : String(v)), false);
   bindRange('rgSeqSpeed', 'valSeqSpeed', () => state.seqSpeed, (v) => { state.seqSpeed = v; },
     (v) => v.toFixed(1) + 'x', false);
   bindRange('rgSeqChars', 'valSeqChars', () => state.seqChars, (v) => { state.seqChars = v; },
@@ -348,40 +596,9 @@ function bindUI() {
     resetPreview();
   };
 
-  $('swAnti').checked = state.anti;
-  $('antiRows').hidden = !state.anti;
   $('swAnti').onchange = () => {
     state.anti = $('swAnti').checked;
-    $('antiRows').hidden = !state.anti;
-    if (state.anti) {
-      // 翻页会露出完整字，与“任意单帧不出现完整字”冲突，直接禁用
-      if (state.flip !== 'none') {
-        state.flipBeforeAnti = state.flip;
-        state.flip = 'none';
-      }
-      $('selFlip').value = 'none';
-      $('selFlip').disabled = true;
-      $('selFlipDur').disabled = true;
-      $('selFlipInt').disabled = true;
-      $('flipAntiNote').hidden = false;
-      $('rgOcclusion').disabled = true;
-      if (state.occlusion < 70) {
-        state.occlusion = 70;
-        $('rgOcclusion').value = 70;
-        fillRange($('rgOcclusion'), $('valOcclusion'), (v) => v + '%');
-      }
-    } else {
-      $('selFlip').disabled = false;
-      $('selFlipDur').disabled = false;
-      $('selFlipInt').disabled = false;
-      $('flipAntiNote').hidden = true;
-      $('rgOcclusion').disabled = false;
-      if (state.flipBeforeAnti && state.flipBeforeAnti !== 'none') {
-        state.flip = state.flipBeforeAnti;
-        $('selFlip').value = state.flip;
-      }
-      state.flipBeforeAnti = 'none';
-    }
+    applyAntiUi();
     resetPreview();
   };
 
@@ -389,33 +606,114 @@ function bindUI() {
   bindSelect('selFlipDur', () => String(state.flipDur), (v) => { state.flipDur = parseFloat(v); });
   bindSelect('selFlipInt', () => String(state.flipInt), (v) => { state.flipInt = parseFloat(v); });
   bindSelect('selGifEdge', () => String(state.gifEdge), (v) => { state.gifEdge = parseInt(v, 10) || 480; });
+  bindSelect('selDuration', () => String(state.duration), (v) => { state.duration = parseFloat(v) || 5; });
   syncFmtFields();
+  syncAspectFields();
 
   $('btnPause').onclick = () => {
     state.playing = !state.playing;
     $('btnPause').textContent = state.playing ? '暂停' : '播放';
+    syncBgVideo();
   };
+
+  // 拖动画布调整文字位置（双击或按钮复位）
+  let drag = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    $('posHint').hidden = true;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: state.offsetX, oy: state.offsetY };
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    setOffset(drag.ox + (e.clientX - drag.x) / r.width,
+      drag.oy + (e.clientY - drag.y) / r.height);
+  });
+  const endDrag = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    drag = null;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+    savePrefs();
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('dblclick', () => { setOffset(0, 0); savePrefs(); });
+  $('btnPosReset').onclick = () => { setOffset(0, 0); savePrefs(); };
+  updatePosUi();
+  setTimeout(() => { $('posHint').hidden = true; }, 5000);
 
   $('btnBg').onclick = () => $('fileBg').click();
   $('fileBg').addEventListener('change', () => {
     const f = $('fileBg').files[0];
-    if (!f) return;
-    const img = new Image();
-    const url = URL.createObjectURL(f);
-    img.onload = () => {
-      if (bgUrl) URL.revokeObjectURL(bgUrl);
-      bgUrl = url;
-      state.bgImage = img;
-      $('btnBgClear').hidden = false;
-      toast('背景已设置');
-      resetPreview();
-    };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
     $('fileBg').value = '';
+    if (!f) return;
+    if (f.size > 100 * 1024 * 1024) {
+      toast('文件过大，请选择 100MB 以内的背景');
+      return;
+    }
+    clearBackground();
+    const token = ++bgToken;
+    const url = URL.createObjectURL(f);
+    bgUrl = url;
+    const isVideo = (f.type || '').startsWith('video/')
+      || /\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(f.name || '');
+    if (isVideo) {
+      const v = document.createElement('video');
+      v.src = url;
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.preload = 'auto';
+      $('bgVideoHolder').replaceChildren(v);
+      v.onloadedmetadata = () => {
+        if (token !== bgToken) return;
+        state.bgVideo = v;
+        state.bgVideoFile = f;
+        state.bgKind = 'video';
+        $('btnBgClear').hidden = false;
+        toast('视频背景已设置，导出会保留原声');
+        syncBgVideo();
+        resetPreview();
+      };
+      v.onloadeddata = () => {
+        if (token !== bgToken) return;
+        syncBgVideo();
+        resetPreview();
+      };
+      v.onerror = () => {
+        if (token !== bgToken) return;
+        toast('无法读取这个视频，请换一个文件');
+        clearBackground();
+        $('btnBgClear').hidden = true;
+        resetPreview();
+      };
+      v.load();
+    } else {
+      const img = new Image();
+      img.onload = () => {
+        if (token !== bgToken) return;
+        state.bgImage = img;
+        state.bgKind = 'image';
+        $('btnBgClear').hidden = false;
+        toast('背景图片已设置');
+        resetPreview();
+      };
+      img.onerror = () => {
+        if (token !== bgToken) return;
+        toast('无法读取这张图片');
+        clearBackground();
+        $('btnBgClear').hidden = true;
+        resetPreview();
+      };
+      img.src = url;
+    }
   });
   $('btnBgClear').onclick = () => {
-    state.bgImage = null;
+    clearBackground();
     $('btnBgClear').hidden = true;
     toast('已恢复默认绿幕');
     resetPreview();
@@ -465,6 +763,118 @@ function applyAdv(c, w, h, frameIndex) {
   c.restore();
 }
 
+/* ------------------------------------------------ 视频背景 --- */
+let muxerPromise = null;
+function ensureMp4Muxer() {
+  if (window.Mp4Muxer) return Promise.resolve(window.Mp4Muxer);
+  if (!muxerPromise) {
+    muxerPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = './vendor/mp4-muxer.js';
+      s.onload = () => {
+        if (window.Mp4Muxer) resolve(window.Mp4Muxer);
+        else reject(new Error('此浏览器无法加载视频导出组件，请检查网络后重试'));
+      };
+      s.onerror = () => reject(new Error('此浏览器无法加载视频导出组件，请检查网络后重试'));
+      document.head.appendChild(s);
+    }).catch((e) => { muxerPromise = null; throw e; });
+  }
+  return muxerPromise;
+}
+
+/* 把视频精确定位到某一时刻，供逐帧导出使用 */
+async function seekVideoTo(video, t) {
+  if (!video) return;
+  if (video.readyState < 2) {
+    await new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (done) return; done = true; video.removeEventListener('loadeddata', finish); resolve(); };
+      video.addEventListener('loadeddata', finish);
+      setTimeout(finish, 1500);
+    });
+  }
+  const dur = isFinite(video.duration) ? video.duration : 0;
+  const target = dur > 0 ? Math.min(Math.max(0, t), Math.max(0, dur - 0.001)) : Math.max(0, t);
+  if (Math.abs(video.currentTime - target) < 0.002) return;
+  await new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      video.removeEventListener('seeked', finish);
+      resolve();
+    };
+    video.addEventListener('seeked', finish);
+    try { video.currentTime = target; } catch (e) { finish(); }
+    setTimeout(finish, 1500);
+  });
+  // 让解码后的这一帧有机会进入绘制管线
+  await new Promise((r) => setTimeout(r, 0));
+}
+
+/* 从原视频里解出音轨，再编码成 AAC；失败返回 null（导出无声视频） */
+async function encodeAudioFromVideo(file, duration) {
+  if (!file || typeof AudioEncoder === 'undefined') return null;
+  let actx = null;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    actx = new Ctx();
+    if (actx.state === 'suspended') {
+      try { await actx.resume(); } catch (e) {}
+    }
+    const raw = await file.arrayBuffer();
+    const ab = await actx.decodeAudioData(raw.slice(0));
+    const numberOfChannels = Math.min(2, ab.numberOfChannels || 1);
+    const sampleRate = ab.sampleRate;
+    const totalSamples = Math.min(ab.length, Math.max(0, Math.floor(sampleRate * duration)));
+    if (totalSamples < 1024) return null;
+    const support = await AudioEncoder.isConfigSupported({
+      codec: 'mp4a.40.2', sampleRate, numberOfChannels, bitrate: 128000,
+    });
+    if (!support.supported) return null;
+    const chunks = [];
+    let encError = null;
+    const enc = new AudioEncoder({
+      output: (chunk, meta) => chunks.push([chunk, meta]),
+      error: (e) => { encError = e; },
+    });
+    enc.configure({
+      codec: 'mp4a.40.2', sampleRate, numberOfChannels, bitrate: 128000,
+    });
+    const BLOCK = 1024;
+    for (let off = 0; off < totalSamples; off += BLOCK) {
+      const n = Math.min(BLOCK, totalSamples - off);
+      const data = new Float32Array(n * numberOfChannels);
+      for (let c = 0; c < numberOfChannels; c++) {
+        const src = ab.getChannelData(Math.min(c, ab.numberOfChannels - 1));
+        data.set(src.subarray(off, off + n), c * n);
+      }
+      const ad = new AudioData({
+        format: 'f32-planar',
+        sampleRate,
+        numberOfFrames: n,
+        numberOfChannels,
+        timestamp: Math.round(off / sampleRate * 1e6),
+        data,
+      });
+      enc.encode(ad);
+      ad.close();
+    }
+    await enc.flush();
+    enc.close();
+    if (encError) throw encError;
+    if (!chunks.length) return null;
+    const hasDesc = chunks.some(([, m]) => m && m.decoderConfig && m.decoderConfig.description);
+    if (!hasDesc) return null;
+    return { chunks, config: { codec: 'aac', numberOfChannels, sampleRate } };
+  } catch (e) {
+    return null;
+  } finally {
+    try { if (actx) await actx.close(); } catch (e) {}
+  }
+}
+
 /* ------------------------------------------------ 导出 --- */
 function outName(fmt) {
   const d = new Date();
@@ -474,10 +884,27 @@ function outName(fmt) {
 }
 
 async function exportMp4() {
-  const { Mp4Muxer } = window;
+  const { Muxer, ArrayBufferTarget } = await ensureMp4Muxer();
   const w = fullW, h = fullH;
   const fps = E.FPS;
-  const total = E.FPS * E.DURATION;
+  const isVideoBg = state.bgKind === 'video' && !!state.bgVideo;
+  let duration = state.duration;
+  if (isVideoBg && isFinite(state.bgVideo.duration) && state.bgVideo.duration > 0) {
+    duration = Math.min(duration, state.bgVideo.duration);
+  }
+  const total = Math.max(1, Math.round(fps * duration));
+  if (isVideoBg) {
+    try { state.bgVideo.pause(); } catch (e) {}
+  }
+
+  // 视频背景：先解出原声并编码 AAC；失败就导出无声视频
+  let audio = null;
+  if (isVideoBg && state.bgVideoFile) {
+    setProgress(1, '正在准备原声…');
+    await new Promise((r) => setTimeout(r, 0));
+    audio = await encodeAudioFromVideo(state.bgVideoFile, duration);
+  }
+
   const mb = Math.ceil(w / 16) * Math.ceil(h / 16);
   // 1080p 级别用 Level 4.0；21:9 等更宽的画布用 Level 5.0
   let codec = mb <= 8192 ? 'avc1.420028' : 'avc1.420032';
@@ -492,11 +919,16 @@ async function exportMp4() {
   }
   if (!support.supported) throw new Error('此浏览器不支持该画面的视频导出，请改用 GIF');
 
-  const muxer = new Mp4Muxer.Muxer({
-    target: new Mp4Muxer.ArrayBufferTarget(),
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
     video: { codec: 'avc', width: w, height: h, frameRate: fps },
+    ...(audio ? { audio: audio.config } : {}),
     fastStart: 'in-memory',
   });
+  if (audio) {
+    for (const [chunk, meta] of audio.chunks) muxer.addAudioChunk(chunk, meta);
+  }
+
   let encError = null;
   let gotConfig = false;
   const encoder = new VideoEncoder({
@@ -523,6 +955,7 @@ async function exportMp4() {
   const usPerFrame = 1e6 / fps;
   for (let fc = 0; fc < total; fc++) {
     if (encError) throw encError;
+    if (isVideoBg) await seekVideoTo(state.bgVideo, fc / fps);
     renderInto(target, s, 1, fc, phase, total, true);
     applyAdv(target.ctx, w, h, fc);
     const frame = new VideoFrame(target.cv, {
@@ -544,7 +977,11 @@ async function exportMp4() {
   await encoder.flush();
   encoder.close();
   muxer.finalize();
-  return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+  return {
+    blob: new Blob([muxer.target.buffer], { type: 'video/mp4' }),
+    audio: !!audio,
+    isVideoBg,
+  };
 }
 
 async function exportGif() {
@@ -557,10 +994,19 @@ async function exportGif() {
   const total = E.FPS * E.GIF_DURATION;                 // 90 帧
   const s = buildSceneAt(gw, gh, gsc);
   const target = makeTarget(gw, gh);
+  const isVideoBg = state.bgKind === 'video' && !!state.bgVideo;
+  const vDur = isVideoBg && isFinite(state.bgVideo.duration) && state.bgVideo.duration > 0
+    ? state.bgVideo.duration : 0;
+  if (isVideoBg) {
+    try { state.bgVideo.pause(); } catch (e) {}
+  }
 
   const gif = GIFEncoder();
   let written = 0;
   for (let fc = 0; fc < total; fc++) {
+    if (isVideoBg) {
+      await seekVideoTo(state.bgVideo, vDur ? (fc / E.FPS) % vDur : 0);
+    }
     renderInto(target, s, gsc, fc, phase, total, true);
     if (written % E.GIF_STRIDE === 0) {
       const { data } = target.ctx.getImageData(0, 0, gw, gh);
@@ -609,6 +1055,7 @@ async function doExport() {
   exporting = true;
   const wasPlaying = state.playing;
   state.playing = false;
+  syncBgVideo();
   window.__lastExportError = null;
   clearTimeout(progressHideTimer);
   const controls = $('controls');
@@ -621,16 +1068,20 @@ async function doExport() {
   const wasGif = state.fmt === 'gif';
   const name = outName(wasGif ? 'gif' : 'mp4');
   try {
-    const blob = wasGif ? await exportGif() : await exportMp4();
+    const result = wasGif ? { blob: await exportGif() } : await exportMp4();
+    const blob = result.blob;
     setProgress(100, '完成');
     await saveBlob(blob, name);
-    toast(wasGif ? 'GIF 已生成' : '视频已生成');
+    if (wasGif) toast('GIF 已生成');
+    else if (result.isVideoBg && result.audio) toast('视频已生成，已保留原声');
+    else if (result.isVideoBg) toast('视频已生成（无原声）');
+    else toast('视频已生成');
     progressHideTimer = setTimeout(() => setProgress(null), 1500);
   } catch (ex) {
     console.error(ex);
     window.__lastExportError = (ex && ex.stack) ? String(ex.stack) : String(ex);
     setProgress(null);
-    const msg = (ex && /^此浏览器不支持/.test(ex.message || ''))
+    const msg = (ex && /^此浏览器/.test(ex.message || ''))
       ? ex.message : '生成失败，请重试';
     toast(msg);
   } finally {
@@ -642,12 +1093,15 @@ async function doExport() {
     $('btnExport').textContent = '生成并保存';
     state.playing = wasPlaying;         // 尊重导出前的暂停状态
     $('btnPause').textContent = wasPlaying ? '暂停' : '播放';
+    syncBgVideo();
     resetPreview();
   }
 }
 
 /* ------------------------------------------------ 启动 --- */
 function init() {
+  loadPrefs();
+  applyAntiUi();
   setupCanvas();
   bindUI();
   resetPreview();
@@ -655,6 +1109,12 @@ function init() {
 
   // 更新预览尺寸标签
   $('sizeLabel').textContent = fullW + ' × ' + fullH;
+
+  window.addEventListener('pagehide', savePrefs);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') savePrefs();
+    else syncBgVideo();
+  });
 
   // Service Worker（仅 HTTPS 或本机可用，局域网 IP 下自动跳过）
   if ('serviceWorker' in navigator &&

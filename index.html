@@ -12,7 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./css/app.css?v=10">
+<link rel="stylesheet" href="./css/app.css?v=11">
 </head>
 <body>
 <div id="app">
@@ -25,6 +25,9 @@
   <main>
     <div id="stage">
       <div id="canvasHolder"></div>
+      <div id="bgVideoHolder" aria-hidden="true"></div>
+      <div id="posHint">拖动文字调整位置</div>
+      <button id="btnPosReset" type="button" hidden>重置位置</button>
       <button id="btnPause" type="button">暂停</button>
     </div>
 
@@ -44,6 +47,13 @@
           <button type="button" data-v="4:5">4:5</button>
           <button type="button" data-v="3:4">3:4</button>
           <button type="button" data-v="21:9">21:9</button>
+          <button type="button" data-v="custom">自定义</button>
+        </div>
+        <div id="customAspectRow" class="custom-aspect" hidden>
+          <input type="number" id="inpCustomW" min="1" max="200" step="1" aria-label="自定义比例宽">
+          <span>:</span>
+          <input type="number" id="inpCustomH" min="1" max="200" step="1" aria-label="自定义比例高">
+          <span class="hint">宽 : 高</span>
         </div>
       </div>
 
@@ -88,12 +98,12 @@
           <input type="color" id="inpColor" aria-label="文字颜色" value="#FFFFFF">
         </div>
         <div>
-          <div class="field-title">背景图片</div>
+          <div class="field-title">背景<span class="helper">图片或视频</span></div>
           <div class="btn-row">
-            <button type="button" class="btn" id="btnBg">选择图片</button>
+            <button type="button" class="btn" id="btnBg">选择背景</button>
             <button type="button" class="btn" id="btnBgClear" hidden>恢复绿幕</button>
           </div>
-          <input type="file" id="fileBg" accept="image/*" hidden>
+          <input type="file" id="fileBg" accept="image/*,video/*" hidden>
         </div>
       </div>
 
@@ -107,10 +117,20 @@
 
       <div class="field" id="gifSizeField" hidden>
         <div class="field-title">GIF 尺寸</div>
-        <select id="selGifEdge" aria-label="GIF 尺寸" class="select">
+        <select id="selGifEdge" class="select" aria-label="GIF 尺寸">
           <option value="480">高清 480</option>
           <option value="500">微信表情 500</option>
           <option value="360">抖音表情 360</option>
+        </select>
+      </div>
+
+      <div class="field" id="durationField">
+        <div class="field-title">视频时长</div>
+        <select id="selDuration" class="select" aria-label="视频时长">
+          <option value="5">5 秒</option>
+          <option value="8">8 秒</option>
+          <option value="10">10 秒</option>
+          <option value="15">15 秒</option>
         </select>
       </div>
 
@@ -152,6 +172,14 @@
               <span>扭曲 0-9，专克数字</span>
             </div>
             <label class="switch"><input type="checkbox" id="swDigit" aria-label="数字变形"><span class="track"></span></label>
+          </div>
+
+          <div class="field">
+            <div class="field-title">文字透视<span class="helper">倾斜文字平面</span></div>
+            <div class="sub-label">左右倾斜<span class="val num" id="valPerspX"></span></div>
+            <input type="range" id="rgPerspX" min="-100" max="100" step="1" aria-label="文字左右倾斜">
+            <div class="sub-label">上下倾斜<span class="val num" id="valPerspY"></span></div>
+            <input type="range" id="rgPerspY" min="-100" max="100" step="1" aria-label="文字上下倾斜">
           </div>
 
           <div class="field">
@@ -219,7 +247,6 @@
   <div id="toast"></div>
 </div>
 
-<script src="./vendor/mp4-muxer.js"></script>
-<script type="module" src="./js/app.js?v=10"></script>
+<script type="module" src="./js/app.js?v=11"></script>
 </body>
 </html>
