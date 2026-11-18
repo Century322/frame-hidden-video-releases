@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0A0A0B">
+<title>帧隐视频</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/app.css?v=7">
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <span class="brand">帧隐视频</span>
+    <span class="size num" id="sizeLabel"></span>
+  </header>
+
+  <main>
+    <div id="stage">
+      <div id="canvasHolder"></div>
+      <button id="btnPause" type="button">暂停</button>
+    </div>
+
+    <div id="controls">
+
+      <div class="field">
+        <div class="field-title">隐藏文字</div>
+        <textarea id="inpText" rows="2" spellcheck="false">测试隐藏文字</textarea>
+      </div>
+
+      <div class="field">
+        <div class="field-title">画面比例</div>
+        <div class="chips" id="aspectChips">
+          <button type="button" data-v="9:16" class="on">9:16</button>
+          <button type="button" data-v="16:9">16:9</button>
+          <button type="button" data-v="1:1">1:1</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-title">百叶窗样式</div>
+        <div class="chips wrap" id="modeChips"></div>
+      </div>
+
+      <div class="field">
+        <div class="field-title">字体大小<span class="val num" id="valFont"></span></div>
+        <input type="range" id="rgFont" min="40" max="300" step="1">
+      </div>
+
+      <div class="field">
+        <div class="field-title">条纹宽度<span class="val num" id="valStripe"></span></div>
+        <input type="range" id="rgStripe" min="4" max="60" step="1">
+      </div>
+
+      <div class="field">
+        <div class="field-title">遮挡强度<span class="val num" id="valOcclusion"></span></div>
+        <input type="range" id="rgOcclusion" min="0" max="100" step="1">
+      </div>
+
+      <div class="field">
+        <div class="field-title">速度<span class="val num" id="valSpeed"></span></div>
+        <input type="range" id="rgSpeed" min="0.3" max="3" step="0.1">
+      </div>
+
+      <div class="field">
+        <div class="field-title">字体宽度<span class="val num" id="valFontWidth"></span></div>
+        <input type="range" id="rgFontWidth" min="0.5" max="2" step="0.05">
+      </div>
+
+      <div class="field">
+        <div class="field-title">不透明度<span class="val num" id="valOpacity"></span></div>
+        <input type="range" id="rgOpacity" min="0" max="100" step="1">
+      </div>
+
+      <div class="field row2">
+        <div>
+          <div class="field-title">文字颜色</div>
+          <input type="color" id="inpColor" value="#FFFFFF">
+        </div>
+        <div>
+          <div class="field-title">背景图片</div>
+          <div class="btn-row">
+            <button type="button" class="btn" id="btnBg">选择图片</button>
+            <button type="button" class="btn" id="btnBgClear" hidden>恢复绿幕</button>
+          </div>
+          <input type="file" id="fileBg" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-title">保存格式</div>
+        <div class="chips" id="fmtChips">
+          <button type="button" data-v="mp4" class="on">MP4 视频</button>
+          <button type="button" data-v="gif">GIF 动图</button>
+        </div>
+      </div>
+
+      <details class="adv" id="advPanel">
+        <summary>
+          <span>高级效果</span>
+          <span class="adv-sub">压印 · 逐字 · 翻页 · 防AI</span>
+        </summary>
+        <div class="adv-body">
+
+          <div class="field">
+            <div class="field-title">压印<span class="helper">字符立体效果</span></div>
+            <div class="chips" id="embossChips">
+              <button type="button" data-v="none" class="on">无</button>
+              <button type="button" data-v="engrave">雕刻</button>
+              <button type="button" data-v="pressed">凸起</button>
+            </div>
+            <div class="sub-label">压印清晰度<span class="val num" id="valClarity"></span></div>
+            <input type="range" id="rgClarity" min="0" max="100" step="1">
+          </div>
+
+          <div class="switch-field">
+            <div class="switch-text">
+              <b>逐个字符</b>
+              <span>按输入顺序循环显示</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="swSeq" aria-label="逐个字符"><span class="track"></span></label>
+          </div>
+          <div id="seqRows" hidden>
+            <div class="sub-label">依次速度<span class="val num" id="valSeqSpeed"></span></div>
+            <input type="range" id="rgSeqSpeed" min="0.2" max="15" step="0.1">
+            <div class="sub-label">每次显示<span class="val num" id="valSeqChars"></span></div>
+            <input type="range" id="rgSeqChars" min="1" max="10" step="1">
+          </div>
+
+          <div class="switch-field">
+            <div class="switch-text">
+              <b>数字变形</b>
+              <span>扭曲 0-9，专克数字</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="swDigit" aria-label="数字变形"><span class="track"></span></label>
+          </div>
+
+          <div class="field">
+            <div class="field-title">翻页过场<span class="helper">完整字一闪而过</span></div>
+            <select id="selFlip" class="select">
+              <option value="none">无</option>
+              <option value="book_turn">右翻</option>
+              <option value="book_turn_l">左翻</option>
+              <option value="book_turn_t">上翻</option>
+              <option value="book_turn_b">下翻</option>
+              <option value="book_turn_br">右下角</option>
+              <option value="book_turn_bl">左下角</option>
+            </select>
+            <div class="row2" style="margin-top:10px">
+              <div>
+                <div class="sub-label">翻页时长</div>
+                <select id="selFlipDur" class="select">
+                  <option value="0.3">0.3 秒</option>
+                  <option value="0.5">0.5 秒</option>
+                  <option value="0.8">0.8 秒</option>
+                  <option value="1.2">1.2 秒</option>
+                </select>
+              </div>
+              <div>
+                <div class="sub-label">翻页间隔</div>
+                <select id="selFlipInt" class="select">
+                  <option value="0">只一次</option>
+                  <option value="3">3 秒</option>
+                  <option value="5">5 秒</option>
+                  <option value="8">8 秒</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="switch-field">
+            <div class="switch-text">
+              <b>防AI增强</b>
+              <span>持久遮挡 + 字符微动 + 扰动</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="swAnti" aria-label="防AI增强"><span class="track"></span></label>
+          </div>
+          <div id="antiRows" hidden>
+            <div class="sub-label">字符微动幅度<span class="val num" id="valMotion"></span></div>
+            <input type="range" id="rgMotion" min="0" max="20" step="1">
+            <div class="sub-label">对抗扰动强度<span class="val num" id="valAdv"></span></div>
+            <input type="range" id="rgAdv" min="0" max="100" step="1">
+            <p class="hint adv-note">仅视频导出生效；无法保证绝对无法被识别，请合规使用</p>
+          </div>
+
+        </div>
+      </details>
+
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div class="fill" id="progressBar"></div></div>
+        <span class="label num" id="progressLabel">0%</span>
+      </div>
+
+      <button type="button" id="btnExport" class="primary">生成并保存</button>
+      <p class="hint">连续播放时能读出文字，暂停或截屏只能看到碎片</p>
+    </div>
+  </main>
+
+  <div id="toast"></div>
+</div>
+
+<script src="./vendor/mp4-muxer.js"></script>
+<script type="module" src="./js/app.js?v=7"></script>
+</body>
+</html>
