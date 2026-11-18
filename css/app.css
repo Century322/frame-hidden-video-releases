@@ -97,6 +97,10 @@ main {
   display: block;
   touch-action: none;
 }
+#canvasHolder canvas:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}
 #posHint {
   position: absolute;
   top: 12px;
@@ -139,6 +143,7 @@ main {
 /* 桌面端控制栏有固定高度且可滚动，子项不能被 flex 压缩（否则折叠面板会被压扁） */
 #controls > * { flex: none; }
 #controls[inert] { pointer-events: none; opacity: .85; }
+#stage[inert], #textModule[inert] { pointer-events: none; }
 input[type='range']:disabled { opacity: .4; }
 .field-title {
   display: flex;
@@ -253,6 +258,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.flip-times { margin-top: 10px; }
 .btn-row { display: flex; gap: 8px; }
 .btn {
   border: 1px solid var(--line);
@@ -497,7 +503,7 @@ input[type='color'] {
 
   main {
     background: var(--surface);
-    padding: 10px 12px 8px;
+    padding: 10px 12px;
     overflow: hidden;
   }
   #contentCard {

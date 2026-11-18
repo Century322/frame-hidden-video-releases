@@ -230,6 +230,8 @@ function setupCanvas() {
     $('canvasHolder').appendChild(canvas);
   }
   canvas.width = pw; canvas.height = ph;
+  canvas.tabIndex = 0;
+  canvas.setAttribute('aria-label', '预览画面：拖拽或方向键调整文字位置，双击或点重置按钮复位');
   const mainCtx = canvas.getContext('2d', { willReadFrequently: true });
   const bare = document.createElement('canvas');
   bare.width = pw; bare.height = ph;
@@ -502,15 +504,39 @@ function openDrawer() {
     controls.scrollTop = 0;
   }
   if (backdrop) backdrop.hidden = false;
+  ['stage', 'textModule', 'exportBar'].forEach((id) => {
+    const el = $(id);
+    if (el) el.setAttribute('inert', '');
+  });
+  setTimeout(() => {
+    if (!drawerOpen) return;
+    const close = $('drawerClose');
+    if (close) {
+      try { close.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }, 240);
 }
 
 function closeDrawer() {
+  const wasOpen = drawerOpen;
   drawerOpen = false;
   closeDropdown();
   const controls = $('controls');
   const backdrop = $('drawerBackdrop');
   if (controls) controls.classList.remove('open');
   if (backdrop) backdrop.hidden = true;
+  if (!exporting) {
+    ['stage', 'textModule', 'exportBar'].forEach((id) => {
+      const el = $(id);
+      if (el) el.removeAttribute('inert');
+    });
+  }
+  if (wasOpen) {
+    const activeBtn = document.querySelector('#tabbar button.on');
+    if (activeBtn) {
+      try { activeBtn.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
 }
 
 function handleTabClick(name) {
@@ -605,15 +631,15 @@ function toggleDropdown(sel, btn) {
     item.textContent = opt.textContent;
     item.setAttribute('role', 'option');
     const on = opt.value === sel.value;
-    if (on) {
-      item.classList.add('on');
-      item.setAttribute('aria-selected', 'true');
-    }
+    item.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (on) item.classList.add('on');
+    const owner = btn;
     item.onclick = (e) => {
       e.stopPropagation();
       sel.value = opt.value;
       sel.dispatchEvent(new Event('change', { bubbles: true }));
       closeDropdown();
+      try { owner.focus({ preventScroll: true }); } catch (err) {}
     };
     menu.appendChild(item);
   });
@@ -823,6 +849,18 @@ function bindUI() {
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
   canvas.addEventListener('dblclick', () => { setOffset(0, 0); savePrefs(); });
+  canvas.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 0.05 : 0.01;
+    let dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft') dx = -step;
+    else if (e.key === 'ArrowRight') dx = step;
+    else if (e.key === 'ArrowUp') dy = -step;
+    else if (e.key === 'ArrowDown') dy = step;
+    if (!dx && !dy) return;
+    e.preventDefault();
+    setOffset(state.offsetX + dx, state.offsetY + dy);
+    scheduleSave();
+  });
   $('btnPosReset').onclick = () => { setOffset(0, 0); savePrefs(); };
   updatePosUi();
   setTimeout(() => { $('posHint').hidden = true; }, 5000);
@@ -920,7 +958,11 @@ function bindUI() {
   }, true);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const owner = ddOpen ? ddOpen.btn : null;
       closeDropdown();
+      if (owner) {
+        try { owner.focus({ preventScroll: true }); } catch (err) {}
+      }
       closeDrawer();
     }
   });
@@ -1343,8 +1385,14 @@ function init() {
 
   window.addEventListener('pagehide', savePrefs);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') savePrefs();
-    else syncBgVideo();
+    if (document.visibilityState === 'hidden') {
+      savePrefs();
+      if (state.bgVideo) {
+        try { state.bgVideo.pause(); } catch (e) {}
+      }
+    } else {
+      syncBgVideo();
+    }
   });
 
   // Service Worker（仅 HTTPS 或本机可用，局域网 IP 下自动跳过）
